@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unified Product List &middot; data sources</title>
+<style>
+  :root{
+    --bg:#10141b;
+    --surface:#171c25;
+    --surface-2:#1c2230;
+    --border:#2a3140;
+    --text:#e9e7e0;
+    --muted:#8b93a3;
+    --amber:#e8a33d;
+    --violet:#8b7cf0;
+    --blue-bg:rgba(55,138,221,0.14);
+    --blue-text:#7fb4e8;
+    --teal-bg:rgba(29,158,117,0.16);
+    --teal-text:#63d6ab;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{-webkit-font-smoothing:antialiased;line-height:1.6;}
+  main{max-width:840px;margin:0 auto;padding:56px 24px 80px;}
+  a{color:var(--amber);}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;align-items:center;margin-bottom:14px;}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--violet);display:inline-block;}
+  h1{font-size:clamp(24px,3.4vw,32px);line-height:1.2;letter-spacing:-0.01em;margin:0 0 12px;}
+  h2{font-size:17px;font-weight:600;margin:40px 0 12px;color:var(--text);}
+  p.lede{color:var(--muted);margin:0 0 28px;max-width:640px;font-size:14.5px;}
+  .legend{display:flex;gap:20px;margin-bottom:16px;font-size:13px;flex-wrap:wrap;color:var(--muted);}
+  .legend .dot{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-2px;}
+  .card-table{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:12px 10px;text-align:left;border-top:1px solid var(--border);}
+  thead th{border-top:none;font-weight:600;}
+  thead th small{display:block;font-weight:400;font-size:11px;margin-top:2px;color:var(--muted);}
+  .muted{color:var(--muted);}
+  .callout{border-radius:8px;padding:14px 16px;font-size:13.5px;margin-bottom:12px;}
+  .callout.blue{background:var(--blue-bg);color:var(--blue-text);}
+  .callout.teal{background:var(--teal-bg);color:var(--teal-text);}
+  code{background:var(--surface-2);padding:1px 6px;border-radius:4px;font-size:12.5px;font-family:var(--mono);border:1px solid var(--border);}
+  ul{padding-left:20px;}
+  li{margin-bottom:10px;color:var(--text);}
+  .diff{background:#0a0d12;color:#c9d1d9;border-radius:8px;padding:12px 14px;font-size:12px;font-family:var(--mono);overflow-x:auto;margin:10px 0 18px;border:1px solid var(--border);}
+  .diff .add{color:#7ee787;}
+  .diff .file{color:#79c0ff;display:block;margin-bottom:8px;}
+  footer{margin-top:56px;color:var(--muted);font-family:var(--mono);font-size:12px;}
+  footer a{color:var(--muted);}
+
+  .table-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;color:var(--muted);}
+  .table-toolbar .toolbar-right{display:flex;align-items:center;gap:10px;}
+  .table-toolbar .page-nav{opacity:.55;}
+  .table-toolbar .page-nav.next{opacity:1;}
+  .table-toolbar .base{color:var(--blue-text);}
+
+  .anim-caption{color:var(--muted);font-size:12.5px;margin:0 0 14px;}
+  .anim-sources{display:flex;gap:12px;margin-bottom:14px;}
+  .src-pill{flex:1;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;transition:box-shadow .2s,border-color .2s;}
+  .src-pill small{display:block;color:var(--muted);font-size:11px;margin-top:2px;}
+  .src-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:1px;}
+  .src-rest .src-dot{background:#378ADD;}
+  .src-categories .src-dot{background:#8b93a3;}
+  .src-graphql .src-dot{background:#1D9E75;}
+  .src-rest{animation:pulseRest 6s infinite ease;}
+  .src-categories{animation:pulseCategories 6s infinite ease;}
+  .src-graphql{animation:pulseGraphql 6s infinite ease;}
+  .anim-table{--d:0s;}
+  .anim-table tr:nth-child(1){--d:0s;}
+  .anim-table tr:nth-child(2){--d:.15s;}
+  .anim-table tr:nth-child(3){--d:.3s;}
+  .anim-table .base{display:inline-block;animation:baseReveal 6s var(--d) infinite ease;}
+  .anim-table .cell-inner{position:relative;display:inline-block;min-width:26px;height:16px;vertical-align:middle;}
+  .anim-table .skeleton,.anim-table .value,.anim-table .cat-skeleton,.anim-table .cat-value{position:absolute;left:0;top:0;white-space:nowrap;}
+  .anim-table .skeleton{animation:tealSkeleton 6s var(--d) infinite ease;color:var(--muted);}
+  .anim-table .value{animation:tealValue 6s var(--d) infinite ease;}
+  .anim-table .cat-skeleton{animation:catSkeleton 6s var(--d) infinite ease;color:var(--muted);}
+  .anim-table .cat-value{animation:catValue 6s var(--d) infinite ease;}
+
+  @keyframes pulseRest{
+    0%,4%{box-shadow:none;border-color:var(--border);}
+    7%{box-shadow:0 0 0 2px rgba(55,138,221,.45);border-color:#378ADD;}
+    16%{box-shadow:none;border-color:var(--border);}
+    100%{box-shadow:none;border-color:var(--border);}
+  }
+  @keyframes pulseCategories{
+    0%,17%{box-shadow:none;border-color:var(--border);}
+    20%{box-shadow:0 0 0 2px rgba(139,147,163,.45);border-color:#8b93a3;}
+    28%{box-shadow:none;border-color:var(--border);}
+    100%{box-shadow:none;border-color:var(--border);}
+  }
+  @keyframes pulseGraphql{
+    0%,17%{box-shadow:none;border-color:var(--border);}
+    20%{box-shadow:0 0 0 2px rgba(29,158,117,.45);border-color:#1D9E75;}
+    28%{box-shadow:none;border-color:var(--border);}
+    100%{box-shadow:none;border-color:var(--border);}
+  }
+  @keyframes baseReveal{
+    0%,8%{opacity:0;transform:translateY(3px);}
+    14%{opacity:1;transform:translateY(0);}
+    88%{opacity:1;}
+    94%,100%{opacity:0;}
+  }
+  @keyframes tealSkeleton{
+    0%,14%{opacity:0;}
+    18%{opacity:1;}
+    40%{opacity:1;}
+    45%,100%{opacity:0;}
+  }
+  @keyframes tealValue{
+    0%,45%{opacity:0;}
+    50%{opacity:1;}
+    84%{opacity:1;}
+    90%,100%{opacity:0;}
+  }
+  @keyframes catSkeleton{
+    0%,14%{opacity:0;}
+    18%{opacity:1;}
+    26%{opacity:1;}
+    30%,100%{opacity:0;}
+  }
+  @keyframes catValue{
+    0%,30%{opacity:0;}
+    34%{opacity:1;}
+    84%{opacity:1;}
+    90%,100%{opacity:0;}
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow"><span class="dot"></span>bc-shawn-space</div>
+  <h1>Unified Product List: where each column's data comes from</h1>
+  <p class="lede">v3/catalog/products (REST) is the engine behind the ng-products Unified Product List table &mdash; it drives sorting, filtering, and pagination. GraphQL is only used afterward, to enrich rows whose IDs are already known.</p>
+
+  <h2>How the rows actually load</h2>
+  <p class="anim-caption">Loops every 6s &mdash; watch the REST call fire first, then the category lookup and the GraphQL inventory call fire together, keyed by the ids it returned. Inventory just resolves a little later.</p>
+  <div class="anim-sources">
+    <div class="src-pill src-rest"><span class="src-dot"></span>v3/catalog/products<small>REST &middot; fires first, returns the page</small></div>
+    <div class="src-pill src-categories"><span class="src-dot"></span>v0/catalog/trees/categories<small>REST &middot; fires alongside GraphQL, resolves first</small></div>
+    <div class="src-pill src-graphql"><span class="src-dot"></span>GetProductsInventory<small>GraphQL &middot; fires alongside categories, resolves a bit later</small></div>
+  </div>
+  <div class="card-table anim-table">
+    <div class="table-toolbar">
+      <span><span class="base">&#9633; 15 Products</span></span>
+      <span class="toolbar-right">
+        <span class="base">&#9881;</span>
+        <span class="base">1&nbsp;-&nbsp;10 of 15</span>
+        <span>&#9662;</span>
+        <span class="page-nav">&#8249;</span>
+        <span class="page-nav next">&#8250;</span>
+      </span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:28px;"></th>
+          <th style="background:var(--blue-bg); color:var(--blue-text);">Name / SKU</th>
+          <th style="background:var(--surface-2); color:var(--muted);">Categories</th>
+          <th style="background:var(--teal-bg); color:var(--teal-text);">Available to sell</th>
+          <th style="background:var(--teal-bg); color:var(--teal-text);">Backorder limit</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="base">&#9633;</span></td>
+          <td><span class="base">[Sample] Oak Cheese Grater <span class="muted">&middot; OCG</span></span></td>
+          <td><span class="cell-inner"><span class="cat-skeleton">&middot;&middot;&middot;</span><span class="cat-value">Kitchen, Shop All</span></span></td>
+          <td><span class="cell-inner"><span class="skeleton">&middot;&middot;&middot;</span><span class="value muted">&mdash;</span></span></td>
+          <td><span class="cell-inner"><span class="skeleton">&middot;&middot;&middot;</span><span class="value muted">&mdash;</span></span></td>
+        </tr>
+        <tr>
+          <td><span class="base">&#9633;</span></td>
+          <td><span class="base">[Sample] Fog Linen Towel <span class="muted">&middot; SLCTBS</span></span></td>
+          <td><span class="cell-inner"><span class="cat-skeleton">&middot;&middot;&middot;</span><span class="cat-value">Bath, Shop All</span></span></td>
+          <td><span class="cell-inner"><span class="skeleton">&middot;&middot;&middot;</span><span class="value">13</span></span></td>
+          <td><span class="cell-inner"><span class="skeleton">&middot;&middot;&middot;</span><span class="value">0</span></span></td>
+        </tr>
+        <tr>
+          <td><span class="base">&#9633;</span></td>
+          <td><span class="base">[Sample] Able Brewing System <span class="muted">&middot; ABS</span></span></td>
+          <td><span class="cell-inner"><span class="cat-skeleton">&middot;&middot;&middot;</span><span class="cat-value">Kitchen, Shop All</span></span></td>
+          <td><span class="cell-inner"><span class="skeleton">&middot;&middot;&middot;</span><span class="value muted">&mdash;</span></span></td>
+          <td><span class="cell-inner"><span class="skeleton">&middot;&middot;&middot;</span><span class="value muted">&mdash;</span></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Full column map (final loaded state)</h2>
+  <div class="legend">
+    <span><span class="dot" style="background:#378ADD"></span>v3/catalog/products (REST engine)</span>
+    <span><span class="dot" style="background:#1D9E75"></span>GetProductsInventory (GraphQL enrichment)</span>
+    <span><span class="dot" style="background:#3a4152"></span>other REST (separate lookup)</span>
+  </div>
+
+  <div class="card-table">
+    <div class="table-toolbar" style="color:var(--blue-text);">
+      <span>&#9633; 15 Products</span>
+      <span class="toolbar-right">
+        <span>&#9881;</span>
+        <span>1&nbsp;-&nbsp;10 of 15</span>
+        <span>&#9662;</span>
+        <span class="page-nav">&#8249;</span>
+        <span class="page-nav next">&#8250;</span>
+      </span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:28px;"></th>
+          <th style="background:var(--blue-bg); color:var(--blue-text);">Name / SKU / image<small>v3 REST</small></th>
+          <th style="background:var(--surface-2); color:var(--muted);">Categories<small>v3 REST ids + separate v0 lookup</small></th>
+          <th style="background:var(--teal-bg); color:var(--teal-text);">Available to sell<small>GraphQL</small></th>
+          <th style="background:var(--teal-bg); color:var(--teal-text);">Backorder limit<small>GraphQL</small></th>
+          <th style="background:var(--teal-bg); color:var(--teal-text);">Qty backordered<small>GraphQL</small></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>&#9633;</td>
+          <td style="background:rgba(55,138,221,0.06);">[Sample] Oak Cheese Grater <span class="muted">&middot; OCG</span></td>
+          <td>Kitchen, Shop All</td>
+          <td style="background:rgba(29,158,117,0.07);" class="muted">&mdash;</td>
+          <td style="background:rgba(29,158,117,0.07);" class="muted">&mdash;</td>
+          <td style="background:rgba(29,158,117,0.07);" class="muted">&mdash;</td>
+        </tr>
+        <tr>
+          <td>&#9633;</td>
+          <td style="background:rgba(55,138,221,0.06);">[Sample] Fog Linen Towel <span class="muted">&middot; SLCTBS</span></td>
+          <td>Bath, Shop All</td>
+          <td style="background:rgba(29,158,117,0.07);">13</td>
+          <td style="background:rgba(29,158,117,0.07);">0</td>
+          <td style="background:rgba(29,158,117,0.07);" class="muted">&mdash;</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout blue">v3/catalog/products drives sort, filter, pagination, and every base column for every row on the page.</div>
+  <div class="callout teal">Once row ids are known, a second GraphQL call batches inventory fields onto those same rows &mdash; it never filters or sorts them.</div>
+
+  <h2>Why new backorder filters must live on v3/catalog/products &mdash; not on GetProductsInventory GraphQL or any other API</h2>
+
+  <ul>
+    <li><strong>The GraphQL inventory query can only look up rows you already know.</strong> <code>GetProductsInventory</code> takes <code>filters: { ids: $productIds }</code> &mdash; it has no way to ask "which products have a backorder limit over 10" across the whole catalog. It's a resolver keyed on IDs, not a search/filter query.</li>
+    <li><strong>The one filter/sort/pagination pipeline lives entirely on the REST side.</strong> Every filter pill &mdash; category, channel, price, visibility, and now backorder message &mdash; is a query-string operator (<code>:in</code>, <code>:not_in</code>, <code>:min</code>, <code>:max</code>) parsed by <code>useFilters</code> and forwarded as-is to <code>v3/catalog/products</code> by <code>useProducts</code>. Filters combine with AND on that single server-side call, and the same call returns the paginated page. Splitting one filter off onto a different API would mean either fetching the whole catalog client-side to filter it in the browser (breaks pagination and performance) or running two separate paginated queries and trying to intersect their results (breaks correctness of "page 2 of 15").</li>
+    <li><strong>This is exactly what the recent backorder message id commits did.</strong> The filter itself (<code>backorder_message_id:in</code> / <code>:not_in</code>) was added straight into <code>supportedFilterPills</code> in <code>useFilters.ts</code> so it flows through the existing v3 REST pipeline like every other filter:</li>
+  </ul>
+
+  <div class="diff"><span class="file">ng-products/src/app-next/apps/ProductList/components/ProductSearch/components/ProductFilters/hooks/useFilters.ts</span>export const supportedFilterPills = [<br>
+&nbsp;&nbsp;<span class="add">+ 'backorder_message_id:in',</span><br>
+&nbsp;&nbsp;<span class="add">+ 'backorder_message_id:not_in',</span><br>
+&nbsp;&nbsp;'channel_ids:in',<br>
+&nbsp;&nbsp;...<br>
+];</div>
+
+  <ul>
+    <li><strong>A new GraphQL query was added &mdash; but only to power the filter's dropdown, not the filtering itself.</strong> <code>GetBackorderMessages</code> (backed by a new <code>StoreInventory.backorderMessages(filters: { messageIds, names })</code> schema field) resolves backorder message <em>names</em> for the picker UI and for labeling already-applied filter pills. The actual "narrow the product list down to these messages" work still happens as a REST query param, because that's the only place server-side filtering of the product collection exists.</li>
+    <li><strong>This isn't specific to inventory data &mdash; any future filter or sort field faces the same constraint.</strong> Whether it's a backorder limit range, qty backordered, or some attribute that doesn't exist yet, adding it as something users can filter or sort the list by means adding a new query parameter to <code>v3/catalog/products</code> itself &mdash; extending the REST schema, the same way <code>backorder_message_id</code> was. GraphQL queries like <code>GetProductsInventory</code> and <code>GetBackorderMessages</code> can only ever enrich or label rows by ID; their schemas have no filter/sort arguments to extend, and the UI's entire filter/sort/pagination pipeline is wired to the REST endpoint alone.</li>
+  </ul>
+
+  <footer><a href="../index.html">&larr; back to index</a></footer>
+</main>
+</body>
+</html>
