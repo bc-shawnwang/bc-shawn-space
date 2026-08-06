@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<!-- saved from url=(0080)file:///Users/shawn.wang/Downloads/launchdarkly-experimentation-reshuffle_3.html -->
-<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
+<html lang="en">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LaunchDarkly · Experimentation reshuffling</title>
 <style>
@@ -426,7 +426,7 @@
             <div class="ramp-sub" id="ramp-sub">live threshold: 20% · prefix fixed</div>
           </div>
 
-          <div class="checkbox-row disabled" id="disable-reshuffle-row">
+          <div class="checkbox-row" id="disable-reshuffle-row">
             <input type="checkbox" id="disable-reshuffle">
             <label for="disable-reshuffle" style="text-transform:none;font-family:var(--sans);font-size:13px;">
               Disable reshuffling
@@ -435,11 +435,11 @@
           </div>
 
           <div style="display:flex;flex-direction:column;gap:8px;">
-            <button class="action primary" id="btn-save-iter" disabled="">
+            <button class="action primary" id="btn-save-iter" disabled>
               Save &amp; start new iteration
               <span class="sub">applies pending ramp % · respects checkbox above</span>
             </button>
-            <button class="action" id="btn-stop-restart" disabled="">
+            <button class="action" id="btn-stop-restart" disabled>
               Stop → start new iteration
               <span class="sub">always mints a new seed, checkbox or not</span>
             </button>
@@ -447,15 +447,15 @@
 
           <div class="seed-block">
             <label style="margin-bottom:0;">Hash prefix</label>
-            <div class="odometer" id="odometer"><div class="digit locked">f</div><div class="digit locked">1</div><div class="digit locked">9</div><div class="digit locked">e</div><div class="digit locked">0</div><div class="digit locked">2</div><div class="digit locked">a</div><div class="digit locked">7</div></div>
+            <div class="odometer" id="odometer"></div>
             <div class="seed-caption" id="seed-caption">flagKey.salt — never regenerates</div>
           </div>
 
-          <div class="example" id="example-panel"><span class="k">context</span><span>ctx-0007</span><span class="k">hashed</span><span>checkout-v2.f19e02a7.ctx-0007</span><span class="k">digest</span><span>0xaafcc2a6</span><span class="k">bucket</span><span>0.667919317</span><span class="k">threshold</span><span>0.20</span><span class="k">serves</span><span class="serves-false">false</span></div>
+          <div class="example" id="example-panel"></div>
         </div>
 
         <div class="grid-area">
-          <div class="grid-wrap" id="grid"><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div></div>
+          <div class="grid-wrap" id="grid"></div>
           <div class="legend">
             <span><span class="swatch" style="background:var(--amber);"></span> serving (bucket &lt; ramp%)</span>
             <span><span class="swatch" style="background:var(--surface-2);border:1px solid var(--border-soft);"></span> not serving</span>
@@ -466,9 +466,9 @@
       </div>
 
       <div class="stats-bar">
-        <div class="stat kept"><div class="n" id="stat-kept">51</div><div class="l">carried over</div></div>
-        <div class="stat added"><div class="n" id="stat-added">0</div><div class="l">newly assigned</div></div>
-        <div class="stat dropped"><div class="n" id="stat-dropped">0</div><div class="l">dropped</div></div>
+        <div class="stat kept"><div class="n" id="stat-kept">—</div><div class="l">carried over</div></div>
+        <div class="stat added"><div class="n" id="stat-added">—</div><div class="l">newly assigned</div></div>
+        <div class="stat dropped"><div class="n" id="stat-dropped">—</div><div class="l">dropped</div></div>
       </div>
     </div>
   </section>
@@ -746,6 +746,5 @@
   updateModeUI();
 })();
 </script>
-
-
-</body></html>
+</body>
+</html>
