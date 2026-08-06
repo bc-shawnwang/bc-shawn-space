@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<!-- saved from url=(0080)file:///Users/shawn.wang/Downloads/launchdarkly-experimentation-reshuffle_3.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LaunchDarkly · Experimentation reshuffling</title>
+<style>
+  :root{
+    --bg:#10141b;
+    --surface:#171c25;
+    --surface-2:#1c2230;
+    --border:#2a3140;
+    --border-soft:#232a38;
+    --text:#e9e7e0;
+    --muted:#8b93a3;
+    --amber:#e8a33d;
+    --amber-dim:#4a3c22;
+    --violet:#8b7cf0;
+    --violet-dim:#332d55;
+    --coral:#e2626b;
+    --coral-dim:#432a2e;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{
+    -webkit-font-smoothing:antialiased;
+    line-height:1.55;
+  }
+  main{max-width:960px;margin:0 auto;padding:56px 24px 80px;}
+  a{color:var(--amber);text-decoration:none;border-bottom:1px solid var(--amber-dim);}
+  a:hover{border-bottom-color:var(--amber);}
+
+  /* ---------- header ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--violet);display:inline-block;}
+  h1{
+    font-size:clamp(28px,4vw,40px);
+    line-height:1.15;
+    letter-spacing:-0.01em;
+    margin:14px 0 12px;
+    font-weight:700;
+  }
+  .lede{color:var(--muted);font-size:16px;max-width:640px;margin:0 0 8px;}
+  .lede strong{color:var(--text);font-weight:600;}
+
+  section{margin-top:64px;}
+  h2{
+    font-size:13px;
+    font-family:var(--mono);
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--muted);
+    border-bottom:1px solid var(--border);
+    padding-bottom:12px;
+    margin:0 0 24px;
+  }
+  h2 span.num{color:var(--violet);margin-right:8px;}
+
+  /* ---------- comparison table ---------- */
+  .compare-intro{font-size:15px;color:var(--muted);max-width:680px;margin:0 0 24px;}
+  .compare-intro strong{color:var(--text);}
+  .compare-wrap{
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:hidden;
+    overflow-x:auto;
+  }
+  table.compare{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13.5px;
+    min-width:640px;
+  }
+  table.compare th{
+    font-family:var(--mono);
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--muted);
+    background:var(--surface-2);
+    text-align:left;
+    padding:14px 18px;
+    border-bottom:1px solid var(--border);
+  }
+  table.compare th.col-standard{color:var(--amber);border-left:2px solid var(--amber);}
+  table.compare th.col-experiment{color:var(--violet);border-left:2px solid var(--violet);}
+  table.compare td{
+    padding:13px 18px;
+    border-bottom:1px solid var(--border-soft);
+    vertical-align:top;
+    background:var(--surface);
+  }
+  table.compare tr:last-child td{border-bottom:none;}
+  table.compare td.row-label{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--muted);
+    white-space:nowrap;
+    background:var(--surface-2);
+  }
+  table.compare td.col-standard{border-left:2px solid var(--amber-dim);}
+  table.compare td.col-experiment{border-left:2px solid var(--violet-dim);}
+  table.compare code{
+    font-family:var(--mono);font-size:12px;
+    background:var(--surface-2);padding:1px 6px;border-radius:4px;color:var(--violet);
+  }
+  table.compare a{font-size:13px;}
+  table.compare .doc-link{display:block;margin-top:3px;}
+  table.compare .example-list{margin:0;padding-left:16px;}
+  table.compare .example-list li{margin-bottom:7px;font-size:12.5px;line-height:1.5;}
+  table.compare .example-list li:last-child{margin-bottom:0;}
+
+  /* ---------- interactive ---------- */
+  .lab{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .lab-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:16px 20px;
+    border-bottom:1px solid var(--border);
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .mode-toggle{
+    display:inline-flex;
+    background:var(--surface-2);
+    border:1px solid var(--border-soft);
+    border-radius:999px;
+    padding:3px;
+    font-family:var(--mono);
+    font-size:12.5px;
+  }
+  .mode-toggle button{
+    border:none;background:transparent;color:var(--muted);
+    padding:7px 14px;border-radius:999px;cursor:pointer;
+    font-family:var(--mono);font-size:12.5px;
+    transition:background 160ms, color 160ms;
+  }
+  .mode-toggle button.active{background:var(--amber);color:#241a08;font-weight:600;}
+  .mode-toggle button.active.exp-active{background:var(--violet);color:#1a1530;}
+
+  .iter-readout{font-family:var(--mono);font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:8px;}
+  .status-chip{
+    font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:999px;
+    border:1px solid var(--border-soft);color:var(--muted);
+  }
+  .status-chip.running{color:#8fe6a8;border-color:#2b4a35;}
+  .status-chip.stopped{color:var(--coral);border-color:var(--coral-dim);}
+
+  .lab-body{display:grid;grid-template-columns:280px 1fr;gap:0;}
+  .controls{
+    padding:20px;
+    border-right:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+  }
+  .field label{
+    display:block;font-size:12px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;
+    font-family:var(--mono);
+  }
+  .ramp-row{display:flex;align-items:center;gap:10px;}
+  input[type=range]{
+    -webkit-appearance:none;width:100%;height:4px;border-radius:999px;
+    background:var(--border);outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:var(--text);cursor:pointer;border:3px solid var(--bg);
+    box-shadow:0 0 0 1px var(--border);
+  }
+  .ramp-value{font-family:var(--mono);font-size:15px;min-width:52px;text-align:right;}
+  .ramp-sub{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:6px;}
+  .ramp-sub .pending-diff{color:var(--violet);}
+
+  .checkbox-row{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--text);}
+  .checkbox-row input{margin-top:2px;accent-color:var(--violet);}
+  .checkbox-row .hint{display:block;color:var(--muted);font-size:12px;margin-top:3px;}
+  .checkbox-row.disabled{opacity:0.4;pointer-events:none;}
+
+  button.action{
+    font-family:var(--sans);font-size:13.5px;font-weight:600;
+    border:1px solid var(--border-soft);background:var(--surface-2);color:var(--text);
+    padding:10px 14px;border-radius:8px;cursor:pointer;text-align:left;
+    transition:border-color 150ms, background 150ms;
+  }
+  button.action:hover{border-color:var(--violet);}
+  button.action.primary{background:var(--violet);color:#181433;border-color:var(--violet);}
+  button.action.primary:hover{background:#9b8ef8;}
+  button.action:disabled{opacity:0.35;cursor:not-allowed;}
+  button.action .sub{display:block;font-size:11px;font-weight:400;color:inherit;opacity:0.75;margin-top:2px;font-family:var(--mono);}
+
+  .seed-block{padding-top:6px;border-top:1px solid var(--border-soft);}
+  .odometer{display:flex;gap:3px;margin-top:8px;}
+  .digit{
+    font-family:var(--mono);font-size:16px;font-weight:600;
+    background:var(--surface-2);border:1px solid var(--border-soft);
+    border-radius:5px;width:20px;height:28px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--violet);
+    transform-style:preserve-3d;
+  }
+  .digit.locked{color:var(--amber);}
+  @keyframes flipChar{
+    0%{transform:rotateX(0deg);opacity:1;}
+    45%{transform:rotateX(92deg);opacity:0.25;}
+    55%{transform:rotateX(92deg);opacity:0.25;}
+    100%{transform:rotateX(0deg);opacity:1;}
+  }
+  .digit.flip{animation:flipChar 420ms ease-in-out;}
+  .seed-caption{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px;}
+
+  /* grid area */
+  .grid-area{padding:20px;}
+  .grid-wrap{
+    display:grid;
+    grid-template-columns:repeat(24, 1fr);
+    gap:4px;
+  }
+  .cell{
+    aspect-ratio:1/1;
+    border-radius:3px;
+    background:var(--surface-2);
+    border:1px solid var(--border-soft);
+    transition:background 500ms ease, border-color 500ms ease;
+  }
+  .cell.on{background:var(--amber);border-color:transparent;}
+  @keyframes pulseIn{
+    0%{transform:scale(0.55);box-shadow:0 0 0 0 rgba(139,124,240,0);}
+    35%{transform:scale(1.25);box-shadow:0 0 0 5px rgba(139,124,240,0.4);background:var(--violet);}
+    100%{transform:scale(1);box-shadow:0 0 0 0 rgba(139,124,240,0);}
+  }
+  .cell.flash-in{animation:pulseIn 650ms ease-out;}
+  @keyframes pulseOut{
+    0%{background:var(--coral);transform:scale(1.1);}
+    100%{background:var(--surface-2);transform:scale(1);}
+  }
+  .cell.flash-out{animation:pulseOut 650ms ease-out;}
+
+  .legend{display:flex;gap:18px;margin-top:16px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--muted);}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .swatch{width:10px;height:10px;border-radius:2px;display:inline-block;}
+
+  .stats-bar{
+    display:flex;gap:24px;padding:16px 20px;border-top:1px solid var(--border);
+    flex-wrap:wrap;
+  }
+  .stat{font-family:var(--mono);}
+  .stat .n{font-size:20px;font-weight:700;}
+  .stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;}
+  .stat.kept .n{color:var(--amber);}
+  .stat.added .n{color:var(--violet);}
+  .stat.dropped .n{color:var(--coral);}
+
+  /* example calc panel */
+  .example{
+    margin-top:16px;padding:14px 16px;background:var(--surface-2);
+    border:1px solid var(--border-soft);border-radius:8px;
+    font-family:var(--mono);font-size:12.5px;color:#cfd3dc;
+    display:grid;grid-template-columns:auto 1fr;gap:6px 14px;
+  }
+  .example .k{color:var(--muted);}
+  .example .serves-true{color:var(--amber);font-weight:700;}
+  .example .serves-false{color:var(--muted);}
+
+  /* takeaways */
+  .takeaways ul{padding-left:20px;margin:0;}
+  .takeaways li{margin-bottom:14px;font-size:15px;}
+  .takeaways li strong{color:var(--amber);}
+  .takeaways li.violet strong{color:var(--violet);}
+
+  footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--border);font-size:12.5px;color:var(--muted);font-family:var(--mono);}
+
+  @media (max-width:720px){
+    table.compare{font-size:12.5px;}
+    .lab-body{grid-template-columns:1fr;}
+    .controls{border-right:none;border-bottom:1px solid var(--border);}
+    .grid-wrap{grid-template-columns:repeat(16,1fr);}
+    main{padding:36px 16px 60px;}
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <div class="eyebrow"><span class="dot"></span> DISCOVERY · PROJECT-7864 · PART 2</div>
+  <h1>Two features, one hash function</h1>
+  <p class="lede">
+    A percentage rollout and an Experiment iteration aren't two settings on the same feature — they're two
+    different parts of LaunchDarkly. A rollout is a targeting-rule option that ships with <strong>every</strong> flag.
+    Experimentation is a separate product built on top of flags, with its own audience allocation and iteration
+    lifecycle. Both walk the same weighted-variation hash underneath — what differs is where the seed comes from
+    and when it's allowed to move.
+  </p>
+
+  <section id="mechanism">
+    <h2><span class="num">1 ·</span>Standard rollout vs. Experiment iteration</h2>
+    <p class="compare-intro">
+      <strong>Short version:</strong> a rollout's hash prefix is fixed at flag creation and never regenerates.
+      An experiment's hash prefix is tied to its current iteration — starting a new one can mint a fresh seed,
+      which recomputes every context's bucket even though the ramp % threshold itself didn't move.
+    </p>
+
+    <div class="compare-wrap">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Aspect</th>
+            <th class="col-standard">Standard percentage rollout</th>
+            <th class="col-experiment">Experiment iteration</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="row-label">What it is</td>
+            <td class="col-standard">A targeting-rule option on any flag. No separate product or entitlement.</td>
+            <td class="col-experiment">A distinct LaunchDarkly product built on top of a flag — audience allocation, metrics, iterations.</td>
+          </tr>
+          <tr>
+            <td class="row-label">Where you configure it</td>
+            <td class="col-standard">Flag → <code>Targeting</code> tab → a rule's percentage rollout</td>
+            <td class="col-experiment">Experiment → <code>Design</code> tab → audience allocation</td>
+          </tr>
+          <tr>
+            <td class="row-label">Availability</td>
+            <td class="col-standard">Included with every flag, on every plan</td>
+            <td class="col-experiment">Included on Developer / Foundation / Enterprise / Guardian plans; an add-on on older Pro or Enterprise plans</td>
+          </tr>
+          <tr>
+            <td class="row-label">Hash prefix</td>
+            <td class="col-standard"><code>seed = null</code> → <code>flagKey + "." + salt</code>, fixed at flag creation</td>
+            <td class="col-experiment"><code>seed = iteration.seed</code> — can be regenerated</td>
+          </tr>
+          <tr>
+            <td class="row-label">When buckets can move</td>
+            <td class="col-standard">Never on their own — only the ramp % threshold moves</td>
+            <td class="col-experiment">Whenever a new iteration starts and mints a fresh seed</td>
+          </tr>
+          <tr>
+            <td class="row-label">Raising the % only</td>
+            <td class="col-standard">Always sticky — contexts already in, stay in</td>
+            <td class="col-experiment">Sticky only if <code>Disable reshuffling</code> is checked — off by default</td>
+          </tr>
+          <tr>
+            <td class="row-label">Lower, then raise the %</td>
+            <td class="col-standard">Still sticky — nothing about a rollout reacts to direction</td>
+            <td class="col-experiment">Reshuffles regardless of the checkbox</td>
+          </tr>
+          <tr>
+            <td class="row-label">Stop → restart</td>
+            <td class="col-standard">No such concept — a rollout doesn't stop or iterate</td>
+            <td class="col-experiment">Always mints a new seed, checkbox or not</td>
+          </tr>
+          <tr>
+            <td class="row-label">Official docs</td>
+            <td class="col-standard"><a href="https://launchdarkly.com/docs/home/releases/percentage-rollouts" target="_blank" rel="noopener">Percentage rollouts →</a></td>
+            <td class="col-experiment">
+              <a href="https://launchdarkly.com/docs/home/experimentation" target="_blank" rel="noopener">Experimentation overview →</a>
+              <a class="doc-link" href="https://launchdarkly.com/docs/home/experimentation/carryover" target="_blank" rel="noopener">Variation reassignment →</a>
+            </td>
+          </tr>
+          <tr>
+            <td class="row-label">Use case examples</td>
+            <td class="col-standard">
+              <ul class="example-list">
+                <li>Canary launch — ship a new checkout flow to 1% of traffic, ramp to 100% over weeks if nothing breaks</li>
+                <li>Staged deprecation — move a legacy API off 5%, then 25%, then 100% of callers on a fixed schedule</li>
+                <li>Permanent cohort — give a fixed 10% of enterprise accounts early access to a feature indefinitely</li>
+                <li>Ops-style kill switch — gate a risky code path behind a slowly increasing percentage, no metrics attached</li>
+              </ul>
+            </td>
+            <td class="col-experiment">
+              <ul class="example-list">
+                <li>A/B test — compare two checkout button colors against a click-through-rate metric until significant</li>
+                <li>Funnel optimization — test signup step order and measure drop-off at each stage</li>
+                <li>User-day experiment — re-randomize daily on purpose to cancel out weekday/weekend behavior swings</li>
+                <li>Multi-armed bandit — shift traffic toward whichever variation is currently winning on a live metric</li>
+              </ul>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="interactive">
+    <h2><span class="num">2 ·</span>Try it — 240 contexts, one flag</h2>
+
+    <div class="lab">
+      <div class="lab-top">
+        <div class="mode-toggle">
+          <button id="btn-standard" class="active">standard rollout</button>
+          <button id="btn-experiment">experiment</button>
+        </div>
+        <div class="iter-readout">
+          <span id="iter-label">iteration —</span>
+          <span class="status-chip running" id="status-chip">running</span>
+        </div>
+      </div>
+
+      <div class="lab-body">
+        <div class="controls">
+          <div class="field">
+            <label id="ramp-label">Ramp %</label>
+            <div class="ramp-row">
+              <input type="range" id="ramp-slider" min="0" max="100" value="20" step="1">
+              <span class="ramp-value" id="ramp-value">20%</span>
+            </div>
+            <div class="ramp-sub" id="ramp-sub">live threshold: 20% · prefix fixed</div>
+          </div>
+
+          <div class="checkbox-row disabled" id="disable-reshuffle-row">
+            <input type="checkbox" id="disable-reshuffle">
+            <label for="disable-reshuffle" style="text-transform:none;font-family:var(--sans);font-size:13px;">
+              Disable reshuffling
+              <span class="hint">Only holds the seed when the new ramp % ≥ the last committed ramp %.</span>
+            </label>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button class="action primary" id="btn-save-iter" disabled="">
+              Save &amp; start new iteration
+              <span class="sub">applies pending ramp % · respects checkbox above</span>
+            </button>
+            <button class="action" id="btn-stop-restart" disabled="">
+              Stop → start new iteration
+              <span class="sub">always mints a new seed, checkbox or not</span>
+            </button>
+          </div>
+
+          <div class="seed-block">
+            <label style="margin-bottom:0;">Hash prefix</label>
+            <div class="odometer" id="odometer"><div class="digit locked">f</div><div class="digit locked">1</div><div class="digit locked">9</div><div class="digit locked">e</div><div class="digit locked">0</div><div class="digit locked">2</div><div class="digit locked">a</div><div class="digit locked">7</div></div>
+            <div class="seed-caption" id="seed-caption">flagKey.salt — never regenerates</div>
+          </div>
+
+          <div class="example" id="example-panel"><span class="k">context</span><span>ctx-0007</span><span class="k">hashed</span><span>checkout-v2.f19e02a7.ctx-0007</span><span class="k">digest</span><span>0xaafcc2a6</span><span class="k">bucket</span><span>0.667919317</span><span class="k">threshold</span><span>0.20</span><span class="k">serves</span><span class="serves-false">false</span></div>
+        </div>
+
+        <div class="grid-area">
+          <div class="grid-wrap" id="grid"><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div></div>
+          <div class="legend">
+            <span><span class="swatch" style="background:var(--amber);"></span> serving (bucket &lt; ramp%)</span>
+            <span><span class="swatch" style="background:var(--surface-2);border:1px solid var(--border-soft);"></span> not serving</span>
+            <span><span class="swatch" style="background:var(--violet);"></span> just turned on this action</span>
+            <span><span class="swatch" style="background:var(--coral);"></span> just turned off this action</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat kept"><div class="n" id="stat-kept">51</div><div class="l">carried over</div></div>
+        <div class="stat added"><div class="n" id="stat-added">0</div><div class="l">newly assigned</div></div>
+        <div class="stat dropped"><div class="n" id="stat-dropped">0</div><div class="l">dropped</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="takeaways" class="takeaways">
+    <h2><span class="num">3 ·</span>What this shows</h2>
+    <ul>
+      <li><strong>Standard mode:</strong> drag the slider up, and "dropped" stays at zero no matter what. The prefix never moves, so raising the threshold can only extend the range a context already sits in — never evict it.</li>
+      <li class="violet"><strong>Experiment mode, checkbox off:</strong> click "Save &amp; start new iteration" and watch the odometer flip. Even a straight increase, 6% → 30%, can drop contexts that were previously in — because the whole number line got re-drawn under them, not just the threshold.</li>
+      <li><strong>Experiment mode, checkbox on:</strong> raise the ramp and the odometer holds — same seed, same behavior as standard mode. Now lower it and raise it again: the seed flips anyway, on schedule, exactly as documented.</li>
+      <li class="violet"><strong>Stop → start:</strong> mints a new seed unconditionally. It's the one action in this whole widget the checkbox can't touch.</li>
+    </ul>
+  </section>
+
+  <footer>
+    Model of documented behavior for LaunchDarkly percentage rollouts, experiment iterations, and variation reassignment.
+    Hashing here is a simplified 32-bit function for illustration — the shape of the sticky-vs-reshuffle behavior matches production, the digest itself is not LaunchDarkly's actual SHA-1 scheme.
+  </footer>
+
+</main>
+
+<script>
+(function(){
+  const CONTEXTS = Array.from({length:240}, (_,i)=>'ctx-'+String(i+1).padStart(4,'0'));
+  const EXAMPLE_KEY = 'ctx-0007';
+  const STANDARD_PREFIX = 'checkout-v2.f19e02a7';
+
+  function fnv1a(str){
+    let h = 0x811c9dc5;
+    for(let i=0;i<str.length;i++){
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return h>>>0;
+  }
+  function bucketFor(prefix, key){
+    return fnv1a(prefix+'.'+key) / 4294967296;
+  }
+  function randomSeedHex(){
+    let s='';
+    for(let i=0;i<8;i++) s += Math.floor(Math.random()*16).toString(16);
+    return s;
+  }
+
+  let mode = 'standard';           // 'standard' | 'experiment'
+  let liveRamp = 20;
+  let pendingRamp = 20;
+  let seed = randomSeedHex();
+  let iteration = 1;
+  let status = 'running';
+  let prevServing = computeServing(liveRamp, STANDARD_PREFIX);
+
+  function currentPrefix(committed){
+    if(mode === 'standard') return STANDARD_PREFIX;
+    return committed || seed;
+  }
+
+  function computeServing(rampPct, prefix){
+    const threshold = rampPct/100;
+    const set = new Set();
+    CONTEXTS.forEach(k => { if(bucketFor(prefix, k) < threshold) set.add(k); });
+    return set;
+  }
+
+  // ---------- DOM refs ----------
+  const gridEl = document.getElementById('grid');
+  const rampSlider = document.getElementById('ramp-slider');
+  const rampValue = document.getElementById('ramp-value');
+  const rampSub = document.getElementById('ramp-sub');
+  const disableReshuffleRow = document.getElementById('disable-reshuffle-row');
+  const disableReshuffleBox = document.getElementById('disable-reshuffle');
+  const btnSaveIter = document.getElementById('btn-save-iter');
+  const btnStopRestart = document.getElementById('btn-stop-restart');
+  const btnStandard = document.getElementById('btn-standard');
+  const btnExperiment = document.getElementById('btn-experiment');
+  const iterLabel = document.getElementById('iter-label');
+  const statusChip = document.getElementById('status-chip');
+  const odometerEl = document.getElementById('odometer');
+  const seedCaption = document.getElementById('seed-caption');
+  const statKept = document.getElementById('stat-kept');
+  const statAdded = document.getElementById('stat-added');
+  const statDropped = document.getElementById('stat-dropped');
+  const examplePanel = document.getElementById('example-panel');
+
+  // build grid cells once
+  const cellEls = CONTEXTS.map(() => {
+    const d = document.createElement('div');
+    d.className = 'cell';
+    gridEl.appendChild(d);
+    return d;
+  });
+
+  function buildOdometer(hex, locked){
+    odometerEl.innerHTML = '';
+    hex.split('').forEach(ch => {
+      const d = document.createElement('div');
+      d.className = 'digit' + (locked ? ' locked' : '');
+      d.textContent = ch;
+      odometerEl.appendChild(d);
+    });
+  }
+
+  function flipOdometerTo(hex){
+    const digits = Array.from(odometerEl.children);
+    hex.split('').forEach((ch, i) => {
+      const d = digits[i];
+      if(!d) return;
+      setTimeout(() => {
+        d.classList.add('flip');
+        setTimeout(() => { d.textContent = ch; }, 190);
+        setTimeout(() => { d.classList.remove('flip'); }, 420);
+      }, i*45);
+    });
+  }
+
+  function renderExample(prefix, rampPct){
+    const raw = prefix + '.' + EXAMPLE_KEY;
+    const digest = fnv1a(raw).toString(16).padStart(8,'0');
+    const bucket = bucketFor(prefix, EXAMPLE_KEY);
+    const threshold = rampPct/100;
+    const serves = bucket < threshold;
+    examplePanel.innerHTML =
+      '<span class="k">context</span><span>'+EXAMPLE_KEY+'</span>' +
+      '<span class="k">hashed</span><span>'+raw+'</span>' +
+      '<span class="k">digest</span><span>0x'+digest+'</span>' +
+      '<span class="k">bucket</span><span>'+bucket.toFixed(9)+'</span>' +
+      '<span class="k">threshold</span><span>'+threshold.toFixed(2)+'</span>' +
+      '<span class="k">serves</span><span class="'+(serves?'serves-true':'serves-false')+'">'+serves+'</span>';
+  }
+
+  function diffAndRender(newServing, animate){
+    const added = [];
+    const dropped = [];
+    let kept = 0;
+    CONTEXTS.forEach((k, i) => {
+      const was = prevServing.has(k);
+      const is = newServing.has(k);
+      const el = cellEls[i];
+      el.classList.remove('flash-in','flash-out');
+      if(is && was) kept++;
+      if(is && !was) added.push(i);
+      if(!is && was) dropped.push(i);
+      el.classList.toggle('on', is);
+    });
+    if(animate){
+      added.forEach((i,idx) => {
+        const el = cellEls[i];
+        setTimeout(() => {
+          el.classList.add('flash-in');
+          setTimeout(() => el.classList.remove('flash-in'), 700);
+        }, (i % 24) * 8);
+      });
+      dropped.forEach((i,idx) => {
+        const el = cellEls[i];
+        setTimeout(() => {
+          el.classList.add('flash-out');
+          setTimeout(() => el.classList.remove('flash-out'), 700);
+        }, (i % 24) * 8);
+      });
+    }
+    statKept.textContent = kept;
+    statAdded.textContent = added.length;
+    statDropped.textContent = dropped.length;
+    prevServing = newServing;
+  }
+
+  function updateModeUI(){
+    btnStandard.classList.toggle('active', mode==='standard');
+    btnExperiment.classList.toggle('active', mode==='experiment');
+    btnExperiment.classList.toggle('exp-active', mode==='experiment');
+    disableReshuffleRow.classList.toggle('disabled', mode!=='experiment');
+    btnSaveIter.disabled = mode!=='experiment';
+    btnStopRestart.disabled = mode!=='experiment';
+    iterLabel.textContent = mode==='experiment' ? ('iteration '+iteration) : 'iteration —';
+    buildOdometer(mode==='standard' ? STANDARD_PREFIX.split('.')[1] : seed, mode==='standard');
+    seedCaption.textContent = mode==='standard'
+      ? 'flagKey.salt — never regenerates'
+      : 'iteration seed — regenerates on reshuffle';
+    if(mode==='standard'){
+      rampSub.textContent = 'live threshold: '+liveRamp+'% · prefix fixed';
+    } else {
+      rampSub.innerHTML = 'pending: '+pendingRamp+'% · live: '+liveRamp+'%' +
+        (pendingRamp!==liveRamp ? ' <span class="pending-diff">— not applied yet</span>' : ' <span style="color:#5b6472">— matches live</span>');
+    }
+  }
+
+  function setStatus(s){
+    status = s;
+    statusChip.textContent = s;
+    statusChip.classList.toggle('running', s==='running');
+    statusChip.classList.toggle('stopped', s==='stopped');
+  }
+
+  // ---------- events ----------
+  rampSlider.addEventListener('input', (e) => {
+    const v = parseInt(e.target.value, 10);
+    pendingRamp = v;
+    rampValue.textContent = v+'%';
+    if(mode==='standard'){
+      liveRamp = v;
+      const prefix = STANDARD_PREFIX;
+      const newServing = computeServing(liveRamp, prefix);
+      diffAndRender(newServing, true);
+      renderExample(prefix, liveRamp);
+      updateModeUI();
+    } else {
+      renderExample(seed, liveRamp); // example panel still reflects committed state until saved
+      updateModeUI();
+    }
+  });
+
+  btnStandard.addEventListener('click', () => {
+    if(mode==='standard') return;
+    mode = 'standard';
+    liveRamp = pendingRamp;
+    rampSlider.value = liveRamp;
+    rampValue.textContent = liveRamp+'%';
+    setStatus('running');
+    const newServing = computeServing(liveRamp, STANDARD_PREFIX);
+    diffAndRender(newServing, true);
+    renderExample(STANDARD_PREFIX, liveRamp);
+    updateModeUI();
+  });
+
+  btnExperiment.addEventListener('click', () => {
+    if(mode==='experiment') return;
+    mode = 'experiment';
+    pendingRamp = liveRamp;
+    setStatus('running');
+    const newServing = computeServing(liveRamp, seed);
+    diffAndRender(newServing, true);
+    renderExample(seed, liveRamp);
+    updateModeUI();
+  });
+
+  btnSaveIter.addEventListener('click', () => {
+    const increasing = pendingRamp >= liveRamp;
+    const keepSeed = disableReshuffleBox.checked && increasing;
+    const newSeed = keepSeed ? seed : randomSeedHex();
+    const seedChanged = newSeed !== seed;
+    seed = newSeed;
+    liveRamp = pendingRamp;
+    iteration += 1;
+    setStatus('running');
+    if(seedChanged) flipOdometerTo(seed);
+    const newServing = computeServing(liveRamp, seed);
+    diffAndRender(newServing, true);
+    renderExample(seed, liveRamp);
+    updateModeUI();
+  });
+
+  btnStopRestart.addEventListener('click', () => {
+    setStatus('stopped');
+    btnSaveIter.disabled = true;
+    btnStopRestart.disabled = true;
+    setTimeout(() => {
+      const newSeed = randomSeedHex(); // always reshuffles
+      seed = newSeed;
+      liveRamp = pendingRamp;
+      iteration += 1;
+      setStatus('running');
+      flipOdometerTo(seed);
+      const newServing = computeServing(liveRamp, seed);
+      diffAndRender(newServing, true);
+      renderExample(seed, liveRamp);
+      updateModeUI();
+      btnSaveIter.disabled = mode!=='experiment';
+      btnStopRestart.disabled = mode!=='experiment';
+    }, 750);
+  });
+
+  // ---------- init ----------
+  diffAndRender(prevServing, false);
+  renderExample(STANDARD_PREFIX, liveRamp);
+  updateModeUI();
+})();
+</script>
+
+
+</body></html>
