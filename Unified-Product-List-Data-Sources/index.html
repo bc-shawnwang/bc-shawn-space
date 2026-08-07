@@ -263,6 +263,44 @@
     <li><strong>This isn't specific to inventory data &mdash; any future filter or sort field faces the same constraint.</strong> Whether it's a backorder limit range, qty backordered, or some attribute that doesn't exist yet, adding it as something users can filter or sort the list by means adding a new query parameter to <code>v3/catalog/products</code> itself &mdash; extending the REST schema, the same way <code>backorder_message_id</code> was. GraphQL queries like <code>GetProductsInventory</code> and <code>GetBackorderMessages</code> can only ever enrich or label rows by ID; their schemas have no filter/sort arguments to extend, and the UI's entire filter/sort/pagination pipeline is wired to the REST endpoint alone.</li>
   </ul>
 
+  <h2>To add backorder messages per location data into the v3/catalog/products response</h2>
+
+  <ul>
+    <li><strong>The field's shape still needs an owner's decision.</strong> Backorder messages are assigned per location, not as a single value per product or variant, so the new field would have to be an array of <code>{location_id, message_id}</code> pairs rather than a scalar. That's a schema decision for the API owner to make deliberately, not something to infer from the filter work. From the POC PR description, product-level tracking would return the array on the product itself:</li>
+  </ul>
+
+  <div class="diff"><span class="file">GET /catalog/products?include=backorder_messages &mdash; product-level tracking</span>{<br>
+&nbsp;&nbsp;"data": [{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"id": 123,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"inventory_tracking": "product",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"backorder_messages": [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ "location_id": 1, "message_id": 5 },<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ "location_id": 2, "message_id": 7 }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;]<br>
+&nbsp;&nbsp;}]<br>
+}</div>
+
+  <p>And variant-level tracking would return it per variant instead, with the product's own array left empty:</p>
+
+  <div class="diff"><span class="file">GET /catalog/products?include=variants,backorder_messages &mdash; variant-level tracking</span>{<br>
+&nbsp;&nbsp;"data": [{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"id": 456,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"inventory_tracking": "variant",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"backorder_messages": [],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"variants": [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ "id": 900, "backorder_messages": [{ "location_id": 1, "message_id": 5 }] },<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ "id": 901, "backorder_messages": [] }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;]<br>
+&nbsp;&nbsp;}]<br>
+}</div>
+
+  <ul>
+    <li><strong>It adds new sub-queries, and with them, complexity and cost.</strong> Populating the field means querying the per-location inventory tables in addition to the main product query, branching on each product's inventory tracking mode. More moving parts in the request path means more surface area for bugs and a real performance cost on top of the existing response.</li>
+    <li><strong>It would be a third copy of the same data.</strong> Inventory gRPC and the admin GraphQL schema already return backorder messages for a product or variant. Adding the field to <code>v3/catalog/products</code> too means three independent sources for the same underlying data, and three places that can drift out of sync.</li>
+  </ul>
+
+  <p class="muted">Prototyped in <a href="https://github.com/bigcommerce/bigcommerce/pull/69562" target="_blank" rel="noopener">bigcommerce/bigcommerce#69562</a> as an <code>include=backorder_messages</code> param &mdash; worth a read before deciding whether to pursue this.</p>
+
   <footer><a href="../index.html">&larr; back to index</a></footer>
 </main>
 </body>
