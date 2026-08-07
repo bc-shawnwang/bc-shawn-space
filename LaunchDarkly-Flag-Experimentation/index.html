@@ -70,6 +70,17 @@
   /* ---------- comparison table ---------- */
   .compare-intro{font-size:15px;color:var(--muted);max-width:680px;margin:0 0 24px;}
   .compare-intro strong{color:var(--text);}
+  .plain-callout{
+    max-width:680px;
+    margin:0 0 24px;
+    padding:14px 18px;
+    background:var(--amber-dim);
+    border-left:3px solid var(--amber);
+    border-radius:6px;
+    font-size:15px;
+    color:var(--text);
+  }
+  .plain-callout strong{color:var(--amber);}
   .compare-wrap{
     border:1px solid var(--border);
     border-radius:10px;
@@ -316,6 +327,13 @@
       <strong>Short version:</strong> a rollout's hash prefix is fixed at flag creation and never regenerates.
       An experiment's hash prefix is tied to its current iteration — starting a new one can mint a fresh seed,
       which recomputes every context's bucket even though the ramp % threshold itself didn't move.
+    </p>
+
+    <p class="plain-callout">
+      <strong>In plain terms:</strong> with a standard rollout, the same store is always on the same side of the
+      line, every time. Moving the ramp % up or down never reshuffles anybody — it just slides the cutoff. A store
+      that's in at 30% is still in at 50%, and a store that's out at 30% stays out no matter how many times you
+      raise the percentage, lower it, or raise it again. Same store, same result, every single time.
     </p>
 
     <div class="compare-wrap">
