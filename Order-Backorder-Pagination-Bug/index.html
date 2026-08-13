@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order search &middot; backorder filter pagination bug</title>
+<style>
+  :root{
+    --bg:#10141b;
+    --surface:#171c25;
+    --surface-2:#1c2230;
+    --border:#2a3140;
+    --text:#e9e7e0;
+    --muted:#8b93a3;
+    --amber:#e8a33d;
+    --amber-dim:#4a3c22;
+    --violet:#8b7cf0;
+    --blue-bg:rgba(55,138,221,0.14);
+    --blue-text:#7fb4e8;
+    --teal-bg:rgba(29,158,117,0.16);
+    --teal-text:#63d6ab;
+    --red-bg:rgba(221,76,76,0.14);
+    --red-text:#e8837f;
+    --green:#63d6ab;
+    --red:#e8837f;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{-webkit-font-smoothing:antialiased;line-height:1.6;}
+  main{max-width:840px;margin:0 auto;padding:56px 24px 80px;}
+  a{color:var(--amber);}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;align-items:center;margin-bottom:14px;}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--violet);display:inline-block;}
+  h1{font-size:clamp(24px,3.4vw,32px);line-height:1.2;letter-spacing:-0.01em;margin:0 0 12px;}
+  h2{font-size:17px;font-weight:600;margin:40px 0 12px;color:var(--text);}
+  p.lede{color:var(--muted);margin:0 0 20px;max-width:640px;font-size:14.5px;}
+  code{background:var(--surface-2);padding:1px 6px;border-radius:4px;font-size:12.5px;font-family:var(--mono);border:1px solid var(--border);}
+  .meta-bar{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:8px;padding:12px 16px;margin-bottom:28px;font-size:12.5px;}
+  .meta-item{display:flex;align-items:baseline;gap:8px;}
+  .meta-label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;min-width:90px;flex-shrink:0;}
+  .meta-item a{color:var(--blue-text);text-decoration:none;}
+  .meta-item a:hover{text-decoration:underline;}
+  .meta-item code{color:var(--text);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:16px;}
+  .card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--violet);margin-bottom:6px;}
+  .card-file{font-size:11px;color:var(--muted);font-family:var(--mono);float:right;}
+  .code{background:#0a0d12;color:#c9d1d9;border-radius:8px;padding:12px 14px;font-size:12.5px;font-family:var(--mono);overflow-x:auto;margin:10px 0;border:1px solid var(--border);white-space:pre;}
+  .code .kw{color:#ff7b72;}
+  .code .num{color:#79c0ff;}
+  .code .cm{color:#8b949e;}
+  .math{font-family:var(--mono);font-size:13px;color:var(--amber);margin:6px 0;}
+  .arrow{text-align:center;color:var(--muted);font-size:18px;margin:-4px 0 4px;}
+  .controls{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+  .controls label{font-size:13px;color:var(--muted);}
+  .page-btn{background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:7px 15px;border-radius:8px;cursor:pointer;font-size:13.5px;font-weight:600;}
+  .page-btn:hover{border-color:var(--amber-dim);}
+  .page-btn.active{background:var(--amber);border-color:var(--amber);color:#141414;}
+  .limit-input{background:#0a0d12;border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;width:56px;font-size:13px;}
+  .id-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;}
+  .id-chip{background:#0a0d12;border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-family:var(--mono);font-size:11.5px;color:var(--muted);}
+  .id-chip.in-page{border-color:var(--blue-text);color:var(--text);background:var(--blue-bg);}
+  .id-chip.skipped{opacity:.35;text-decoration:line-through;}
+  .id-chip.returned{border-color:var(--green);background:var(--teal-bg);color:var(--green);}
+  .legend{display:flex;gap:16px;font-size:11.5px;color:var(--muted);margin-top:6px;flex-wrap:wrap;}
+  .legend span{display:flex;align-items:center;gap:5px;}
+  .dot-sq{width:9px;height:9px;border-radius:3px;display:inline-block;}
+  .result-banner{border-radius:10px;padding:16px 18px;font-size:14.5px;font-weight:700;border:1px solid var(--border);}
+  .result-banner.ok{background:var(--teal-bg);border-color:var(--green);color:var(--green);}
+  .result-banner.fail{background:var(--red-bg);border-color:var(--red);color:var(--red);}
+  .callout{border-radius:8px;padding:14px 16px;font-size:13.5px;margin-bottom:12px;}
+  .callout.blue{background:var(--blue-bg);color:var(--blue-text);}
+  ul{padding-left:20px;}
+  li{margin-bottom:8px;color:var(--text);font-size:14px;}
+  footer{margin-top:56px;color:var(--muted);font-family:var(--mono);font-size:12px;}
+  footer a{color:var(--muted);}
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow"><span class="dot"></span>bc-shawn-space</div>
+  <h1>Order search &middot; &quot;On Backorder&quot; filter returns zero past page 1</h1>
+  <p class="lede">
+    <code>OrderElasticSearch::filterOrders</code> pages correctly on page 1, then returns empty results
+    for every page after that &mdash; even though the total count says there are more orders.
+  </p>
+
+  <div class="meta-bar">
+    <div class="meta-item">
+      <span class="meta-label">Introduced in</span>
+      <a href="https://github.com/bigcommerce/bigcommerce/pull/63438" target="_blank" rel="noopener">
+        PR #63438 &mdash; feat(orders): ORDERS-7031 add &quot;On Backorder&quot; filter to View Orders page
+      </a>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Discussion</span>
+      <a href="https://bigcommerce.slack.com/archives/C04D0Q2LC/p1786578855670879?thread_ts=1786464369.472269&cid=C04D0Q2LC" target="_blank" rel="noopener">
+        Slack thread &middot; #C04D0Q2LC
+      </a>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Entry point</span>
+      <code>Bigcommerce\Order\Infrastructure\Search\OrderElasticSearch::filterOrders()</code>
+    </div>
+  </div>
+
+  <h2>Root cause</h2>
+  <div class="callout blue">
+    Pagination is applied <strong>twice</strong>: once when Elasticsearch fetches only the current page's order
+    IDs, and again when <code>DataModel_PagedCollection</code> appends <code>LIMIT/OFFSET</code> to the SQL query
+    that's already scoped to just those IDs. For page&nbsp;&ge;&nbsp;2, the re-applied offset skips past every
+    row in the already-page-sized result set &rarr; zero rows, regardless of how many backordered orders actually exist.
+  </div>
+
+  <div class="card">
+    <span class="card-file">OrderElasticSearch.php:22-63</span>
+    <div class="card-title">Entry point &mdash; called once per page request</div>
+    <div class="code" id="entryCode"></div>
+  </div>
+
+  <h2>Walk it through</h2>
+  <div class="controls">
+    <label>Page:</label>
+    <button class="page-btn" data-page="1">1</button>
+    <button class="page-btn" data-page="2">2</button>
+    <button class="page-btn" data-page="3">3</button>
+    <label style="margin-left:10px;">Page size:</label>
+    <input class="limit-input" id="limitInput" type="number" value="20" min="1" max="50">
+  </div>
+
+  <div class="card">
+    <span class="card-file">ESSearchClient::searchESForOrders()</span>
+    <div class="card-title">1&middot; Elasticsearch returns this page's IDs</div>
+    <div class="math" id="esMath"></div>
+    <div class="code" id="esCode"></div>
+    <div class="id-row" id="esIds"></div>
+  </div>
+
+  <div class="arrow">&darr;</div>
+
+  <div class="card">
+    <span class="card-file">OrderSearch.php:119-121 + PagedCollection.php:117 / getStartIndex() :236-238</span>
+    <div class="card-title">2&middot; Final SQL &mdash; IDs scoped, then LIMIT/OFFSET re-applied on top</div>
+    <div class="math" id="offsetMath"></div>
+    <div class="code" id="sqlCode"></div>
+    <div style="color:var(--muted);font-size:12.5px;margin-bottom:6px;">
+      That LIMIT/OFFSET lands on the <strong id="sqlRowCount"></strong>-row set already produced by <code>WHERE orderid IN (...)</code>:
+    </div>
+    <div class="id-row" id="offsetIds"></div>
+    <div class="legend">
+      <span><span class="dot-sq" style="background:var(--green)"></span>returned row</span>
+      <span><span class="dot-sq" style="background:var(--border)"></span>skipped by OFFSET</span>
+    </div>
+  </div>
+
+  <div class="arrow">&darr;</div>
+
+  <div class="result-banner" id="resultBanner"></div>
+
+  <h2>Fix direction</h2>
+  <ul>
+    <li><code>OrderSearch::search()</code> shouldn't re-slice a result set that's already been paginated upstream by the ES call.</li>
+    <li>Mirror the existing <code>$partialArrayCollection</code> escape hatch in <code>PagedCollection.php:92</code> (used for the array-collection branch) for the <code>SelectQuery</code> branch at <code>PagedCollection.php:112-119</code>, so a caller can say &quot;this query is already scoped to one page &mdash; don't add LIMIT/OFFSET again.&quot;</li>
+    <li>The total count (<code>getUnlimitedCounts()</code>) is correct and independent of paging, so pagination links/totals render fine &mdash; only the row fetch for page &ge; 2 is broken.</li>
+  </ul>
+
+  <footer>github pages &middot; bc-shawn-space</footer>
+</main>
+
+<script>
+const TOTAL_BACKORDERED = 50;
+const FIRST_ID = 101;
+const allIds = Array.from({length: TOTAL_BACKORDERED}, (_, i) => FIRST_ID + i);
+
+let currentPage = 2;
+
+const limitInput = document.getElementById('limitInput');
+const pageBtns = document.querySelectorAll('.page-btn');
+
+function render() {
+  const limit = Math.max(1, parseInt(limitInput.value, 10) || 20);
+  const page = currentPage;
+
+  pageBtns.forEach(b => b.classList.toggle('active', parseInt(b.dataset.page) === page));
+
+  document.getElementById('entryCode').innerHTML =
+`<span class="kw">public function</span> filterOrders(
+  string $searchQuery,
+  SearchType $searchType,
+  Pager $pager,      <span class="cm">// caller passes page=${page}, limit=${limit} straight through</span>
+  Sorter $sorter,
+): DataModel_PagedCollection {
+  $limit = $pager-&gt;limit();  <span class="cm">// ${limit}</span>
+  $page  = $pager-&gt;page();   <span class="cm">// ${page}</span>
+
+  $elasticSearchResults = $this-&gt;searchClient-&gt;searchESForOrders(
+    $searchQuery, $searchType, $sorter, $page, $limit,
+  );  <span class="cm">// -&gt; ES already returns just page ${page}'s ids</span>
+
+  $orders = $this-&gt;orderRetriever-&gt;search(
+    pager: $pager,   <span class="cm">// same $pager (page=${page}) forwarded again</span>
+    orderIds: $elasticSearchResults['orderIds'],
+    count: $elasticSearchResults['count'],
+  );  <span class="cm">// -&gt; PagedCollection re-offsets using this same $pager</span>
+
+  <span class="kw">return</span> $orders;
+}`;
+
+  const esStart = (page - 1) * limit;
+  const pageIds = allIds.slice(esStart, esStart + limit);
+
+  document.getElementById('esMath').innerHTML =
+    `ES call: <strong>page=${page}, limit=${limit}</strong> &rarr; returns rows [${esStart} .. ${esStart + pageIds.length - 1}] of the full 50`;
+
+  document.getElementById('esCode').innerHTML =
+`starSearchClient.getControlPanelSearchResults(
+  filters: [number_of_backordered_line_items &gt;= 1, ...],
+  page: <span class="num">${page}</span>,
+  limit: <span class="num">${limit}</span>,
+)
+<span class="cm">// -&gt; orderIds = [${pageIds.length ? pageIds[0] + ', ..., ' + pageIds[pageIds.length-1] : ''}]  (${pageIds.length} ids)</span>
+<span class="cm">// -&gt; count    = ${TOTAL_BACKORDERED}  (unlimited total, independent of paging)</span>`;
+
+  document.getElementById('esIds').innerHTML = allIds.map(id => {
+    const inPage = pageIds.includes(id);
+    return `<span class="id-chip ${inPage ? 'in-page' : ''}">${id}</span>`;
+  }).join('');
+
+  const startIndex = (limit * page) - limit;
+  document.getElementById('offsetMath').innerHTML =
+    `getStartIndex() = (limit * page) - limit = (${limit} * ${page}) - ${limit} = <strong>${startIndex}</strong>`;
+
+  document.getElementById('sqlCode').innerHTML =
+`SELECT ... FROM orders o
+WHERE orderid IN (<span class="num">${pageIds.join(', ')}</span>)
+LIMIT <span class="num">${limit}</span> OFFSET <span class="num">${startIndex}</span>
+<span class="cm">// IN-list scoping from OrderSearch.php:119-121</span>
+<span class="cm">// LIMIT/OFFSET re-applied by PagedCollection.php:117</span>`;
+  document.getElementById('sqlRowCount').textContent = pageIds.length;
+
+  const offsetIdsHtml = pageIds.map((id, idx) => {
+    const skipped = idx < startIndex;
+    return `<span class="id-chip ${skipped ? 'skipped' : 'returned'}">${id}</span>`;
+  }).join('');
+  document.getElementById('offsetIds').innerHTML = offsetIdsHtml || '<span class="id-chip">(no rows to offset into)</span>';
+
+  const returnedCount = Math.max(0, pageIds.length - startIndex);
+  const banner = document.getElementById('resultBanner');
+  if (returnedCount > 0 && startIndex === 0) {
+    banner.className = 'result-banner ok';
+    banner.innerHTML = `Page ${page} returns ${returnedCount} row(s) &mdash; OFFSET is 0, so it happens to work.`;
+  } else if (returnedCount > 0) {
+    banner.className = 'result-banner ok';
+    banner.innerHTML = `Page ${page} returns ${returnedCount} row(s) &mdash; partially works by coincidence (limit ${limit} &gt; startIndex ${startIndex}).`;
+  } else {
+    banner.className = 'result-banner fail';
+    banner.innerHTML = `Page ${page} returns 0 rows &mdash; OFFSET ${startIndex} skips past all ${pageIds.length} rows in the already-page-scoped result set. Report shows "empty" even though ${TOTAL_BACKORDERED} backordered orders exist.`;
+  }
+}
+
+pageBtns.forEach(btn => btn.addEventListener('click', () => {
+  currentPage = parseInt(btn.dataset.page);
+  render();
+}));
+limitInput.addEventListener('input', render);
+
+render();
+</script>
+</body>
+</html>
