@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Three cart caches drift apart under Backorder 1.1</title>
+<style>
+  :root{
+    --bg:#10141b;
+    --surface:#171c25;
+    --surface-2:#1c2230;
+    --border:#2a3140;
+    --text:#e9e7e0;
+    --muted:#8b93a3;
+    --amber:#e8a33d;
+    --amber-dim:#4a3c22;
+    --violet:#8b7cf0;
+    --blue-bg:rgba(55,138,221,0.14);
+    --blue-text:#7fb4e8;
+    --teal-bg:rgba(29,158,117,0.16);
+    --teal-text:#63d6ab;
+    --red-bg:rgba(221,76,76,0.14);
+    --red-text:#e8837f;
+    --green:#63d6ab;
+    --red:#e8837f;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{-webkit-font-smoothing:antialiased;line-height:1.6;}
+  main{max-width:980px;margin:0 auto;padding:56px 24px 80px;}
+  a{color:var(--amber);}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;align-items:center;margin-bottom:14px;}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--violet);display:inline-block;}
+  h1{font-size:clamp(24px,3.4vw,32px);line-height:1.2;letter-spacing:-0.01em;margin:0 0 12px;}
+  h2{font-size:17px;font-weight:600;margin:40px 0 12px;color:var(--text);}
+  p.lede{color:var(--muted);margin:0 0 20px;max-width:680px;font-size:14.5px;}
+  code{background:var(--surface-2);padding:1px 6px;border-radius:4px;font-size:12.5px;font-family:var(--mono);border:1px solid var(--border);}
+  .meta-bar{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:8px;padding:12px 16px;margin-bottom:28px;font-size:12.5px;}
+  .meta-item{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .meta-label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;min-width:110px;flex-shrink:0;}
+  .meta-item code{color:var(--text);}
+  .code{background:#0a0d12;color:#c9d1d9;border-radius:8px;padding:11px 13px;font-size:12px;font-family:var(--mono);overflow-x:auto;margin:8px 0;border:1px solid var(--border);white-space:pre;}
+  .code .kw{color:#ff7b72;}
+  .code .cm{color:#8b949e;}
+  .callout{border-radius:8px;padding:14px 16px;font-size:13.5px;margin-bottom:12px;}
+  .callout.blue{background:var(--blue-bg);color:var(--blue-text);}
+  ul{padding-left:20px;}
+  li{margin-bottom:8px;color:var(--text);font-size:14px;}
+  footer{margin-top:56px;color:var(--muted);font-family:var(--mono);font-size:12px;}
+  footer a{color:var(--muted);}
+
+  .verdict-row{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 28px;}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11.5px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);}
+  .badge.ok{color:var(--green);border-color:var(--green);background:var(--teal-bg);}
+
+  /* legend */
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin:10px 0 24px;font-family:var(--mono);}
+  .legend span{display:flex;align-items:center;gap:6px;}
+  .legend .sw{width:9px;height:9px;border-radius:3px;display:inline-block;}
+
+  /* timeline */
+  .timeline{position:relative;}
+  .col-headers{display:grid;grid-template-columns:1fr 1fr;gap:20px;position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0;margin-bottom:4px;}
+  .col-header{text-align:center;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:0.04em;padding:9px 0;border-radius:8px;text-transform:uppercase;}
+  .col-header.off{background:var(--teal-bg);color:var(--teal-text);border:1px solid var(--green);}
+  .col-header.on{background:var(--red-bg);color:var(--red-text);border:1px solid var(--red);}
+
+  .row-label{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);text-align:center;margin:26px 0 10px;position:relative;}
+  .row-label::before,.row-label::after{content:'';position:absolute;top:50%;width:34%;height:1px;background:var(--border);}
+  .row-label::before{left:0;}
+  .row-label::after{right:0;}
+
+  .timeline-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:stretch;}
+  @media (max-width:700px){.timeline-row{grid-template-columns:1fr;} .col-headers{grid-template-columns:1fr;position:static;}}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .card.added{background:var(--amber-dim);border:1px solid var(--amber);}
+  .card.result-ok{border-color:var(--green);}
+  .card.result-fail{border-color:var(--red);}
+  .card-title{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--violet);margin-bottom:2px;}
+  .card.added .card-title{color:var(--amber);}
+  .card-file{font-size:10.5px;color:var(--muted);font-family:var(--mono);margin-bottom:8px;display:block;}
+  .card-desc{font-size:13px;color:var(--text);margin:8px 0;}
+  .card-desc b{color:var(--amber);}
+  .card.added .card-desc b{color:var(--text);}
+
+  .card-empty{background:transparent;border:1px dashed var(--border);border-radius:10px;padding:16px 18px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12.5px;font-style:italic;text-align:center;}
+
+  .cache-mini{margin-top:10px;border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:5px;}
+  .cache-mini-row{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:11.5px;align-items:baseline;}
+  .cache-mini-name{color:var(--muted);white-space:nowrap;}
+  .cache-mini-val{font-weight:700;text-align:right;}
+  .cache-mini-val.v-null{color:var(--red-text);}
+  .cache-mini-val.v-cart1{color:var(--blue-text);}
+  .cache-mini-val.v-cart2{color:var(--teal-text);}
+  .cache-mini-row.changed .cache-mini-val{background:rgba(232,163,61,0.15);border-radius:4px;padding:1px 5px;}
+
+  .result-banner{border-radius:10px;padding:12px 16px;font-size:13.5px;font-weight:700;border:1px solid var(--border);margin-top:8px;text-align:center;}
+  .result-banner.ok{background:var(--teal-bg);border-color:var(--green);color:var(--green);}
+  .result-banner.fail{background:var(--red-bg);border-color:var(--red);color:var(--red);}
+
+  /* evidence table */
+  .ev{border-collapse:collapse;width:100%;font-size:12.5px;}
+  .ev th{text-align:left;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;padding:6px 10px;border-bottom:1px solid var(--border);}
+  .ev td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+  .ev td.file{font-family:var(--mono);color:var(--blue-text);white-space:nowrap;}
+  .ev tr:last-child td{border-bottom:none;}
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow"><span class="dot"></span>bc-shawn-space</div>
+  <h1>Three in-memory cart caches drift apart when Backorder&nbsp;1.1 is on</h1>
+  <p class="lede">
+    <code>InternalApiCheckoutService::$quote</code>, <code>StorefrontCartService::$cachedQuote</code> and
+    <code>CartProjectionCache::$cart</code> are three independent request-lifetime caches of &ldquo;the cart.&rdquo;
+    They normally converge on the same object by accident of call order. An extra save introduced by the
+    Backorder&nbsp;1.1 stock-allocation path breaks that accident &mdash; Klarna's <code>payForOrder</code> ends up
+    reading a cart copy that never received the order id/token.
+  </p>
+
+  <div class="meta-bar">
+    <div class="meta-item">
+      <span class="meta-label">Entry point</span>
+      <code>\Services\Checkout\InternalApiCheckoutService::createOrder()</code> &middot; POST /orders
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Trigger flag</span>
+      <code>InventoryExperiments::BACKORDERS_PHASE_1_1_CONTROL_MESSAGING_ON_STOREFRONT</code>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Verified against</span>
+      current <code>bigcommerce/bigcommerce</code> checkout, storefront cart, and payment-provider code
+    </div>
+  </div>
+
+  <div class="verdict-row">
+    <span class="badge ok">&#10003; three independent caches &mdash; confirmed</span>
+    <span class="badge ok">&#10003; Backorder 1.1 inserts extra save &mdash; confirmed</span>
+    <span class="badge ok">&#10003; Klarna reuses cached quote in payForOrder &mdash; confirmed</span>
+  </div>
+
+  <div class="callout blue">
+    <b>Root cause.</b> <code>CartProjectionCache::save()</code> nulls its own in-memory <code>$cart</code> after
+    persisting, but nothing tells <code>StorefrontCartService::$cachedQuote</code> or
+    <code>InternalApiCheckoutService::$quote</code> that the object they're holding is now stale relative to
+    Redis. Normally that's harmless because <code>StorefrontCartService</code> happens to populate its cache
+    <em>after</em> the only save in the request, so it converges with everyone else. Backorder&nbsp;1.1 adds a
+    stock-allocation save <em>before</em> that population point &mdash; so <code>StorefrontCartService</code>
+    ends up caching a freshly-rebuilt object (&ldquo;CartInstance2&rdquo;) instead of the one
+    (&ldquo;CartInstance1&rdquo;) that later gets the order id/token written onto it.
+  </div>
+
+  <h2>Timeline</h2>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--surface-2);border:1px solid var(--border);"></span>unchanged step</span>
+    <span><span class="sw" style="background:var(--amber-dim);border:1px solid var(--amber);"></span>step added by Backorder 1.1</span>
+    <span><span class="sw" style="background:rgba(232,163,61,0.4);"></span>cache value just changed</span>
+  </div>
+
+  <div class="timeline">
+    <div class="col-headers">
+      <div class="col-header off">Backorder 1.1 &middot; OFF</div>
+      <div class="col-header on">Backorder 1.1 &middot; ON</div>
+    </div>
+
+    <div class="row-label">Start of POST /orders</div>
+    <div class="timeline-row">
+      <div class="card">
+        <span class="card-title">Request start</span>
+        <div class="cache-mini">
+          <div class="cache-mini-row"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-null">null</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <span class="card-title">Request start</span>
+        <div class="cache-mini">
+          <div class="cache-mini-row"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-null">null</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row-label">Critical Point 1 &middot; parent::beforeAction</div>
+    <div class="timeline-row">
+      <div class="card">
+        <span class="card-title">parent::beforeAction</span>
+        <div class="code">if ($this-&gt;isQuoteRequired()) {
+    $quote = $this-&gt;getQuote();
+    $quote = $this-&gt;ensureValidQuote($quote);
+    $this-&gt;service-&gt;setQuote($quote);
+}</div>
+        <div class="card-desc">
+          <code>$this-&gt;getQuote()</code> calls CartService &rarr; CartProjectionCache to get the quote. Since
+          <code>CartProjectionCache::$cart</code> is null, it rebuilds from Redis cache, marked as
+          <b>CartInstance1</b> (without order id/token). <code>$this-&gt;service-&gt;setQuote($quote)</code> sets it
+          on <code>InternalApiCheckoutService::quote</code>.
+        </div>
+        <div class="cache-mini">
+          <div class="cache-mini-row changed"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <span class="card-title">parent::beforeAction</span>
+        <div class="code">if ($this-&gt;isQuoteRequired()) {
+    $quote = $this-&gt;getQuote();
+    $quote = $this-&gt;ensureValidQuote($quote);
+    $this-&gt;service-&gt;setQuote($quote);
+}</div>
+        <div class="card-desc">Same as the OFF path &mdash; no divergence yet.</div>
+        <div class="cache-mini">
+          <div class="cache-mini-row changed"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row-label">Critical Point 1.1 &middot; only on the Backorder 1.1 path</div>
+    <div class="timeline-row">
+      <div class="card-empty">no equivalent step &mdash; goes straight to Critical Point 2</div>
+      <div class="card added">
+        <span class="card-title">Backorder stock allocation + save</span>
+        <div class="card-desc">
+          <code>InternalApiCheckoutService::$quote</code> (CartInstance1) allocates the newest stock position
+          (mutated instance), then <code>CartProjectionCache::save()</code> runs. This saves the mutated instance
+          into Redis and makes <code>CartProjectionCache::$cart</code> null. (Using <code>CartService::save()</code>
+          is the same, since it also refreshes <code>CartProjectionCache::$cart</code> to null.)
+        </div>
+        <div class="cache-mini">
+          <div class="cache-mini-row"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-null">null (diff)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row-label">Critical Point 2 &middot; StorefrontApiPaymentService::identifyProviderId('klarna')</div>
+    <div class="timeline-row">
+      <div class="card">
+        <span class="card-title">identifyProviderId &rarr; isAccepted &rarr; fetchQuote</span>
+        <span class="card-file">identifyProviderId &rarr; verifyPaymentProvider &rarr; ProviderFilter::getProviders &rarr; ProviderMapper::fetch &rarr; ModuleFacade::isAccepted &rarr; CHECKOUT_KLARNA::isAccepted &rarr; fetchQuote() &rarr; StorefrontCartService::findById()</span>
+        <div class="card-desc">
+          First time <code>StorefrontCartService</code> is called &mdash; no in-mem cache, so it goes to
+          <code>CartProjectionCache</code>, which still holds CartInstance1 (no save happened since Point 1).
+          In the end it is <b>CartInstance1</b>.
+        </div>
+        <div class="cache-mini">
+          <div class="cache-mini-row"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+        </div>
+        <div class="card-desc" style="margin-bottom:0;">All three now refer to CartInstance1.</div>
+      </div>
+      <div class="card">
+        <span class="card-title">identifyProviderId &rarr; isAccepted &rarr; fetchQuote</span>
+        <span class="card-file">identifyProviderId &rarr; verifyPaymentProvider &rarr; ProviderFilter::getProviders &rarr; ProviderMapper::fetch &rarr; ModuleFacade::isAccepted &rarr; CHECKOUT_KLARNA::isAccepted &rarr; fetchQuote() &rarr; StorefrontCartService::findById()</span>
+        <div class="card-desc">
+          First time <code>StorefrontCartService</code> is called &mdash; no in-mem cache, so it goes to
+          <code>CartProjectionCache::$cart</code>, which is now <b>null</b> (Point 1.1). It rebuilds from cache,
+          marked as <b>CartInstance2</b> (without order id/token), and sets it on both
+          <code>CartProjectionCache::$cart</code> and <code>StorefrontCartService::$cachedQuote</code>.
+        </div>
+        <div class="cache-mini">
+          <div class="cache-mini-row"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-cart2">CartInstance2 (no order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-cart2">CartInstance2 (no order)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row-label">Critical Point 3 &middot; order created, quote mutated + saved</div>
+    <div class="timeline-row">
+      <div class="card">
+        <span class="card-title">Set order id/token, then save</span>
+        <div class="code">$orderToken = $order-&gt;getToken();
+InternalApiCheckoutService-&gt;setOrderTokenInSession($orderToken);
+InternalApiCheckoutService::$quote-&gt;setOrderId($orderId);
+InternalApiCheckoutService::$quote-&gt;setOrderToken($orderToken);
+
+CartService-&gt;save($this-&gt;quote);</div>
+        <div class="card-desc">
+          This mutation is on CartInstance1, which is shared by all three in-mem caches since they all refer to
+          the same object. The save first persists the change to DB, then makes <code>CartProjectionCache::$cart</code>
+          null. So now the 3 in-mem caches are technically pointing at different states &mdash; but that's not
+          exposed yet, because there's no mixed mutation/query between them after this. <b>Still a hidden trap.</b>
+        </div>
+        <div class="cache-mini">
+          <div class="cache-mini-row changed"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (+order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-cart1">CartInstance1 (+order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-null">null</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <span class="card-title">Set order id/token, then save</span>
+        <div class="code">$orderToken = $order-&gt;getToken();
+InternalApiCheckoutService-&gt;setOrderTokenInSession($orderToken);
+InternalApiCheckoutService::$quote-&gt;setOrderId($orderId);
+InternalApiCheckoutService::$quote-&gt;setOrderToken($orderToken);
+
+CartService-&gt;save($this-&gt;quote);</div>
+        <div class="card-desc">
+          Only <b>CartInstance1</b> gets mutated with order data &mdash; <code>StorefrontCartService::$cachedQuote</code>
+          is holding CartInstance2 and is never touched. The save persists CartInstance1 to DB, then makes
+          <code>CartProjectionCache::$cart</code> null.
+        </div>
+        <div class="cache-mini">
+          <div class="cache-mini-row changed"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (+order)</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-cart2">CartInstance2 (no order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-null">null</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row-label">Critical Point 4 &middot; payForOrder</div>
+    <div class="timeline-row">
+      <div class="card result-ok">
+        <span class="card-title">payForOrder &rarr; module.klarna.php</span>
+        <div class="code">$quote = $this-&gt;fetchQuote(); <span class="cm">// -&gt; StorefrontCartService::findById()</span></div>
+        <div class="card-desc">Reaches <b>CartInstance1</b>, which has the order id/token.</div>
+        <div class="result-banner ok">Correct &mdash; Klarna pays against the cart that has the order id/token.</div>
+      </div>
+      <div class="card result-fail">
+        <span class="card-title">payForOrder &rarr; module.klarna.php</span>
+        <div class="code">$quote = $this-&gt;fetchQuote(); <span class="cm">// -&gt; StorefrontCartService::findById()</span></div>
+        <div class="card-desc">Reaches <b>CartInstance2</b>, which has no order id/token.</div>
+        <div class="result-banner fail">Bug &mdash; Klarna pays against a cart that was never linked to the order.</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Evidence (file:line, verified against current code)</h2>
+  <table class="ev">
+    <tr><th style="width:22%">Claim</th><th style="width:30%">Location</th><th>Notes</th></tr>
+    <tr>
+      <td>Three independent in-memory caches</td>
+      <td class="file">InternalApiCheckoutService.php:200<br>StorefrontCartService.php:98<br>CartProjectionCache.php:21</td>
+      <td>Each holds a private nullable property, populated/read independently.</td>
+    </tr>
+    <tr>
+      <td><code>beforeAction</code> seeds <code>$quote</code> from <code>CartProjectionCache</code></td>
+      <td class="file">CheckoutController.php:78-94<br>OrderController.php:116-151</td>
+      <td><code>getQuote()</code> → <code>setQuote()</code>, chain bottoms out at <code>CartProjectionCache::findById()</code>.</td>
+    </tr>
+    <tr>
+      <td><code>StorefrontCartService::findById()</code> caches locally on first call, falls through to <code>CartProjectionCache</code> on miss</td>
+      <td class="file">StorefrontCartService.php:256-307</td>
+      <td>L268-273 in-memory hit; L278 overwrites <code>$cachedQuote</code> from <code>CartService::findById()</code>.</td>
+    </tr>
+    <tr>
+      <td><code>CartProjectionCache::save()</code> nulls its own in-memory <code>$cart</code></td>
+      <td class="file">CartProjectionCache.php:72-81</td>
+      <td>First line of <code>save()</code> is <code>$this-&gt;cart = null;</code>, then persists.</td>
+    </tr>
+    <tr>
+      <td>Backorder 1.1 inserts a stock-allocation save before payment-provider check</td>
+      <td class="file">CheckoutService.php:712-724<br>CartService.php:755-782 (allocateAndValidateStockForCart)</td>
+      <td>Only when the flag is ON: calls <code>allocateStockPositionToCart()</code> then <code>cartProjectionService-&gt;save($quote)</code> at L771.</td>
+    </tr>
+    <tr>
+      <td>Klarna's <code>isAccepted()</code> is the first thing to call <code>StorefrontCartService::findById()</code></td>
+      <td class="file">module.klarna.php:274-281, 380-396<br>PaymentCartContextService.php:23-43</td>
+      <td>Reached via <code>identifyProviderId → ProviderFilter → ProviderMapper → ModuleFacade::isAccepted</code>.</td>
+    </tr>
+    <tr>
+      <td>Klarna's <code>payForOrder</code> reuses the already-cached quote, doesn't refetch</td>
+      <td class="file">module.klarna.php:527-535<br>InternalApiCheckoutService.php:1418, 1777, 1855</td>
+      <td><code>processPaymentForm()</code> calls <code>fetchQuote()</code> first, only falls back to a fresh <code>findById()</code> if that's empty.</td>
+    </tr>
+    <tr>
+      <td>Final order save (<code>cartService-&gt;save($this-&gt;quote)</code>) leaves <code>StorefrontCartService::$cachedQuote</code> stale</td>
+      <td class="file">InternalApiCheckoutService.php:1349-1353<br>CartService.php:156-184</td>
+      <td><code>CartService::save()</code> never references <code>StorefrontCartService</code> &mdash; it only touches the repository and <code>CartProjectionCache</code>, so any object <code>StorefrontCartService</code> is already holding is left untouched.</td>
+    </tr>
+  </table>
+
+  <h2>What determines whether this actually fires</h2>
+  <ul>
+    <li>Requires <b>Backorder 1.1 ON</b> (<code>BACKORDERS_PHASE_1_1_CONTROL_MESSAGING_ON_STOREFRONT</code>) &mdash; adds the extra invalidating save between <code>beforeAction</code> and the Klarna provider check.</li>
+    <li>Needs checking per-store in LaunchDarkly to confirm this is live for a given affected store, not just theoretically possible.</li>
+  </ul>
+
+  <h2>Fix direction</h2>
+  <ul>
+    <li>Stop treating three separate in-process caches as if they were one source of truth for the duration of a request &mdash; either invalidate all three together on any save, or have <code>StorefrontCartService</code>/<code>InternalApiCheckoutService</code> always resolve through <code>CartProjectionCache</code> instead of keeping their own copies.</li>
+    <li>Re-seed <code>StorefrontCartService::$cachedQuote</code> with the order-linked quote immediately after the order-creation mutation, so any later <code>fetchQuote()</code> call (Klarna's <code>payForOrder</code> included) sees the up-to-date object.</li>
+    <li>Add a regression test with Backorder&nbsp;1.1 ON that asserts the quote passed into <code>payForOrder</code> carries the order id/token.</li>
+  </ul>
+
+  <footer>github pages &middot; bc-shawn-space &middot; validated against bigcommerce/bigcommerce source, 2026-09-10</footer>
+</main>
+</body>
+</html>
