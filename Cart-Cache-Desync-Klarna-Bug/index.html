@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Three cart caches drift apart under Backorder 1.1</title>
+<title>How a small change causes the issue under problematic in-memory cache design</title>
 <style>
   :root{
     --bg:#10141b;
@@ -88,10 +88,10 @@
 
   .card-empty{background:transparent;border:1px dashed var(--border);border-radius:10px;padding:16px 18px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12.5px;font-style:italic;text-align:center;}
 
-  .cache-mini{margin-top:10px;border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:5px;}
-  .cache-mini-row{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:11.5px;align-items:baseline;}
-  .cache-mini-name{color:var(--muted);white-space:nowrap;}
-  .cache-mini-val{font-weight:700;text-align:right;}
+  .cache-mini{margin-top:10px;border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:8px;}
+  .cache-mini-row{display:flex;flex-direction:column;gap:2px;font-family:var(--mono);font-size:11px;}
+  .cache-mini-name{color:var(--muted);word-break:break-word;}
+  .cache-mini-val{font-weight:700;align-self:flex-start;}
   .cache-mini-val.v-null{color:var(--red-text);}
   .cache-mini-val.v-cart1{color:var(--blue-text);}
   .cache-mini-val.v-cart2{color:var(--teal-text);}
@@ -112,7 +112,7 @@
 <body>
 <main>
   <div class="eyebrow"><span class="dot"></span>bc-shawn-space</div>
-  <h1>Three in-memory cart caches drift apart when Backorder&nbsp;1.1 is on</h1>
+  <h1>How a small change causes the issue under problematic in-memory cache design</h1>
   <p class="lede">
     <code>InternalApiCheckoutService::$quote</code>, <code>StorefrontCartService::$cachedQuote</code> and
     <code>CartProjectionCache::$cart</code> are three independent request-lifetime caches of &ldquo;the cart.&rdquo;
@@ -143,14 +143,19 @@
   </div>
 
   <div class="callout blue">
-    <b>Root cause.</b> <code>CartProjectionCache::save()</code> nulls its own in-memory <code>$cart</code> after
-    persisting, but nothing tells <code>StorefrontCartService::$cachedQuote</code> or
-    <code>InternalApiCheckoutService::$quote</code> that the object they're holding is now stale relative to
-    Redis. Normally that's harmless because <code>StorefrontCartService</code> happens to populate its cache
-    <em>after</em> the only save in the request, so it converges with everyone else. Backorder&nbsp;1.1 adds a
-    stock-allocation save <em>before</em> that population point &mdash; so <code>StorefrontCartService</code>
-    ends up caching a freshly-rebuilt object (&ldquo;CartInstance2&rdquo;) instead of the one
-    (&ldquo;CartInstance1&rdquo;) that later gets the order id/token written onto it.
+    <b>Root cause.</b> The underlying design is what's fragile here, not the Backorder&nbsp;1.1 change itself.
+    The same quote aggregate is replicated across three independent in-memory caches with no defined
+    consistency boundary between them &mdash; each service is free to hold, read, and mutate its own copy without
+    any mechanism to keep the others in sync. Once the same logical object exists as multiple separate in-memory
+    copies, an update to one instance can silently leave the others stale, and whether that staleness ever
+    surfaces depends entirely on incidental call order within a request. Today that call order happens to work
+    out: <code>StorefrontCartService</code> populates its cache <em>after</em> the only save in the request, so
+    all three converge on the same object by coincidence, not by design. Backorder&nbsp;1.1 doesn't introduce a
+    new class of bug &mdash; it simply adds one more save into that same request, which is enough to flip the
+    coincidence the other way: <code>StorefrontCartService</code> now populates its cache <em>before</em> the
+    order-linking mutation happens, so it ends up holding a freshly-rebuilt object (&ldquo;CartInstance2&rdquo;)
+    instead of the one (&ldquo;CartInstance1&rdquo;) that later receives the order id/token. Backorder&nbsp;1.1
+    is the trigger; the pre-existing lack of a single, consistent access path for the cart is the actual defect.
   </div>
 
   <h2>Timeline</h2>
@@ -171,17 +176,17 @@
       <div class="card">
         <span class="card-title">Request start</span>
         <div class="cache-mini">
-          <div class="cache-mini-row"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-null">null</span></div>
-          <div class="cache-mini-row"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
-          <div class="cache-mini-row"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">InternalApiCheckoutService::$quote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">StorefrontCartService::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">CartProjectionCache::$cart</span><span class="cache-mini-val v-null">null</span></div>
         </div>
       </div>
       <div class="card">
         <span class="card-title">Request start</span>
         <div class="cache-mini">
-          <div class="cache-mini-row"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-null">null</span></div>
-          <div class="cache-mini-row"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
-          <div class="cache-mini-row"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">InternalApiCheckoutService::$quote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">StorefrontCartService::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">CartProjectionCache::$cart</span><span class="cache-mini-val v-null">null</span></div>
         </div>
       </div>
     </div>
@@ -202,9 +207,9 @@
           on <code>InternalApiCheckoutService::quote</code>.
         </div>
         <div class="cache-mini">
-          <div class="cache-mini-row changed"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
-          <div class="cache-mini-row"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
-          <div class="cache-mini-row changed"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">InternalApiCheckoutService::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">StorefrontCartService::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">CartProjectionCache::$cart</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
         </div>
       </div>
       <div class="card">
@@ -216,9 +221,9 @@
 }</div>
         <div class="card-desc">Same as the OFF path &mdash; no divergence yet.</div>
         <div class="cache-mini">
-          <div class="cache-mini-row changed"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
-          <div class="cache-mini-row"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
-          <div class="cache-mini-row changed"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">InternalApiCheckoutService::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">StorefrontCartService::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">CartProjectionCache::$cart</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
         </div>
       </div>
     </div>
@@ -235,9 +240,9 @@
           is the same, since it also refreshes <code>CartProjectionCache::$cart</code> to null.)
         </div>
         <div class="cache-mini">
-          <div class="cache-mini-row"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
-          <div class="cache-mini-row"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
-          <div class="cache-mini-row changed"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-null">null (diff)</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">InternalApiCheckoutService::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">StorefrontCartService::$cachedQuote</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">CartProjectionCache::$cart</span><span class="cache-mini-val v-null">null (diff)</span></div>
         </div>
       </div>
     </div>
@@ -253,9 +258,9 @@
           In the end it is <b>CartInstance1</b>.
         </div>
         <div class="cache-mini">
-          <div class="cache-mini-row"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
-          <div class="cache-mini-row changed"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
-          <div class="cache-mini-row"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">InternalApiCheckoutService::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">StorefrontCartService::$cachedQuote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">CartProjectionCache::$cart</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
         </div>
         <div class="card-desc" style="margin-bottom:0;">All three now refer to CartInstance1.</div>
       </div>
@@ -269,9 +274,9 @@
           <code>CartProjectionCache::$cart</code> and <code>StorefrontCartService::$cachedQuote</code>.
         </div>
         <div class="cache-mini">
-          <div class="cache-mini-row"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
-          <div class="cache-mini-row changed"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-cart2">CartInstance2 (no order)</span></div>
-          <div class="cache-mini-row changed"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-cart2">CartInstance2 (no order)</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">InternalApiCheckoutService::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (no order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">StorefrontCartService::$cachedQuote</span><span class="cache-mini-val v-cart2">CartInstance2 (no order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">CartProjectionCache::$cart</span><span class="cache-mini-val v-cart2">CartInstance2 (no order)</span></div>
         </div>
       </div>
     </div>
@@ -293,9 +298,9 @@ CartService-&gt;save($this-&gt;quote);</div>
           exposed yet, because there's no mixed mutation/query between them after this. <b>Still a hidden trap.</b>
         </div>
         <div class="cache-mini">
-          <div class="cache-mini-row changed"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (+order)</span></div>
-          <div class="cache-mini-row changed"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-cart1">CartInstance1 (+order)</span></div>
-          <div class="cache-mini-row changed"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">InternalApiCheckoutService::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (+order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">StorefrontCartService::$cachedQuote</span><span class="cache-mini-val v-cart1">CartInstance1 (+order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">CartProjectionCache::$cart</span><span class="cache-mini-val v-null">null</span></div>
         </div>
       </div>
       <div class="card">
@@ -312,9 +317,9 @@ CartService-&gt;save($this-&gt;quote);</div>
           <code>CartProjectionCache::$cart</code> null.
         </div>
         <div class="cache-mini">
-          <div class="cache-mini-row changed"><span class="cache-mini-name">IACS::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (+order)</span></div>
-          <div class="cache-mini-row"><span class="cache-mini-name">SCS::$cachedQuote</span><span class="cache-mini-val v-cart2">CartInstance2 (no order)</span></div>
-          <div class="cache-mini-row changed"><span class="cache-mini-name">CPC::$cart</span><span class="cache-mini-val v-null">null</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">InternalApiCheckoutService::$quote</span><span class="cache-mini-val v-cart1">CartInstance1 (+order)</span></div>
+          <div class="cache-mini-row"><span class="cache-mini-name">StorefrontCartService::$cachedQuote</span><span class="cache-mini-val v-cart2">CartInstance2 (no order)</span></div>
+          <div class="cache-mini-row changed"><span class="cache-mini-name">CartProjectionCache::$cart</span><span class="cache-mini-val v-null">null</span></div>
         </div>
       </div>
     </div>
@@ -381,17 +386,26 @@ CartService-&gt;save($this-&gt;quote);</div>
     </tr>
   </table>
 
-  <h2>What determines whether this actually fires</h2>
-  <ul>
-    <li>Requires <b>Backorder 1.1 ON</b> (<code>BACKORDERS_PHASE_1_1_CONTROL_MESSAGING_ON_STOREFRONT</code>) &mdash; adds the extra invalidating save between <code>beforeAction</code> and the Klarna provider check.</li>
-    <li>Needs checking per-store in LaunchDarkly to confirm this is live for a given affected store, not just theoretically possible.</li>
-  </ul>
-
   <h2>Fix direction</h2>
   <ul>
-    <li>Stop treating three separate in-process caches as if they were one source of truth for the duration of a request &mdash; either invalidate all three together on any save, or have <code>StorefrontCartService</code>/<code>InternalApiCheckoutService</code> always resolve through <code>CartProjectionCache</code> instead of keeping their own copies.</li>
-    <li>Re-seed <code>StorefrontCartService::$cachedQuote</code> with the order-linked quote immediately after the order-creation mutation, so any later <code>fetchQuote()</code> call (Klarna's <code>payForOrder</code> included) sees the up-to-date object.</li>
-    <li>Add a regression test with Backorder&nbsp;1.1 ON that asserts the quote passed into <code>payForOrder</code> carries the order id/token.</li>
+    <li>
+      <b>Quick patch.</b> This is the short-term fix already shipped as <code>BACK-874</code>
+      (<code>SAVE_QUOTE_VIA_STOREFRONT_CART_SERVICE_ON_ORDER_CREATION</code>): route the final order save through
+      <code>StorefrontCartService::save()</code> instead of <code>CartService::save()</code>. That call
+      re-seeds <code>StorefrontCartService::$cachedQuote</code> with the order-linked quote as a side effect,
+      forcibly re-syncing <code>StorefrontCartService</code> and <code>CartProjectionCache</code>'s in-memory
+      copies right before Klarna reads them. It closes this specific gap but doesn't address the underlying
+      design &mdash; the next save added anywhere in the request can reopen the same class of bug.
+    </li>
+    <li>
+      <b>Root fix.</b> Reduce the number of independent in-memory copies of the same quote and give the request
+      a single authoritative access path for it, instead of letting each service keep its own mutable cache
+      that can silently diverge from the others. The performance benefit of caching is still worth keeping
+      &mdash; it just shouldn't come from handing out separate mutable copies of the aggregate. An immutable
+      read model (or a single owned instance that every layer reads through) preserves the speed of an
+      in-memory cache without recreating the &ldquo;which copy is the real one&rdquo;&nbsp;problem every time a
+      new save gets added to the request.
+    </li>
   </ul>
 
   <footer>github pages &middot; bc-shawn-space &middot; validated against bigcommerce/bigcommerce source, 2026-09-10</footer>
