@@ -41,6 +41,8 @@
   .meta-item{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
   .meta-label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;min-width:110px;flex-shrink:0;}
   .meta-item code{color:var(--text);}
+  .meta-item a{color:var(--blue-text);text-decoration:none;}
+  .meta-item a:hover{text-decoration:underline;}
   .code{background:#0a0d12;color:#c9d1d9;border-radius:8px;padding:11px 13px;font-size:12px;font-family:var(--mono);overflow-x:auto;margin:8px 0;border:1px solid var(--border);white-space:pre;}
   .code .kw{color:#ff7b72;}
   .code .cm{color:#8b949e;}
@@ -122,6 +124,10 @@
   </p>
 
   <div class="meta-bar">
+    <div class="meta-item">
+      <span class="meta-label">Incident channel</span>
+      <a href="https://commerce-group.enterprise.slack.com/archives/C0BUS4VEJHF" target="_blank" rel="noopener">#incident-20260903-2636</a>
+    </div>
     <div class="meta-item">
       <span class="meta-label">Entry point</span>
       <code>\Services\Checkout\InternalApiCheckoutService::createOrder()</code> &middot; POST /orders
