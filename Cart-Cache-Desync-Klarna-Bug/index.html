@@ -48,6 +48,16 @@
   .code .cm{color:#8b949e;}
   .callout{border-radius:8px;padding:14px 16px;font-size:13.5px;margin-bottom:12px;}
   .callout.blue{background:var(--blue-bg);color:var(--blue-text);}
+
+  .factors{display:flex;flex-direction:column;gap:14px;margin:18px 0 28px;}
+  .factor{display:flex;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;}
+  .factor-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:rgba(139,124,240,0.16);color:var(--violet);border:1px solid var(--violet);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:13px;}
+  .factor-body{flex:1;min-width:0;}
+  .factor-title{font-size:14.5px;font-weight:700;color:var(--text);margin-bottom:6px;}
+  .factor-desc{font-size:13.5px;color:var(--text);}
+  .factor-desc + .factor-desc{margin-top:10px;}
+  .factor-desc b{color:var(--amber);}
+  .factor-file{font-size:10.5px;color:var(--muted);font-family:var(--mono);margin:8px 0 2px;display:block;}
   ul{padding-left:20px;}
   li{margin-bottom:8px;color:var(--text);font-size:14px;}
   footer{margin-top:56px;color:var(--muted);font-family:var(--mono);font-size:12px;}
@@ -162,6 +172,76 @@
     order-linking mutation happens, so it ends up holding a freshly-rebuilt object (&ldquo;CartInstance2&rdquo;)
     instead of the one (&ldquo;CartInstance1&rdquo;) that later receives the order id/token. Backorder&nbsp;1.1
     is the trigger; the pre-existing lack of a single, consistent access path for the cart is the actual defect.
+  </div>
+
+  <h2>Contributing factors</h2>
+  <div class="factors">
+    <div class="factor">
+      <span class="factor-num">1</span>
+      <div class="factor-body">
+        <div class="factor-title">Backorder 1.1 inserts an extra save</div>
+        <div class="factor-desc">
+          The stock-allocation save added between <code>beforeAction</code> and the Klarna provider check
+          (Critical&nbsp;Point&nbsp;1.1 below) nulls <code>CartProjectionCache::$cart</code> earlier than the
+          OFF path ever did. It doesn't create the desync risk &mdash; it just flips which
+          <code>CartInstance</code> <code>StorefrontCartService</code> ends up caching, exposing the pre-existing
+          design problem described above.
+        </div>
+      </div>
+    </div>
+
+    <div class="factor">
+      <span class="factor-num">2</span>
+      <div class="factor-body">
+        <div class="factor-title">Klarna authorizes off a cached quote instead of the Order model</div>
+        <div class="factor-desc">
+          Klarna is structurally different from other payment providers here. Most non-hosted/card-form
+          providers get their order context via a fresh, token-scoped DB lookup
+          (<code>InternalApiCheckoutService::processPayment()</code> &rarr;
+          <code>$provider-&gt;setOrderData($this-&gt;loadOrder($orderToken))</code>) and operate on raw form
+          data &mdash; no in-memory cart cache involved. Klarna can't do that, because BigPay's Authorize payload
+          needs the full cart contents (line items, addresses, totals), not just an order reference. So
+          <code>module.klarna.php::processPaymentForm()</code> calls <code>fetchQuote()</code> and passes that
+          <em>cached</em> <code>Cart</code>/quote object straight into <code>KlarnaGatewayService::authorize()</code>.
+        </div>
+        <span class="factor-file">Services/Bigpay/Helpers/BigPayRequestMapper.php:233-244, 629-642</span>
+        <div class="code">mapAuthorize(CheckoutCart $quote, ...): AuthorizeRequest
+{
+    ...
+    <span class="cm">// -&gt; mapOrder($quote, $orderUuid)</span>
+}
+
+<span class="kw">private function</span> mapOrder(CheckoutCart $quote, ...): Order
+{
+    <span class="kw">return new</span> Order(
+        $quote-&gt;getOrderId(),     <span class="cm">// order linkage read off the QUOTE, not the Order model</span>
+        $quote-&gt;getOrderToken(),
+        ...
+    );
+}</div>
+        <div class="factor-desc">
+          <code>mapAuthorize()</code> is only ever called from <code>KlarnaGatewayService::authorize()</code>
+          (<code>Services/Payments/Klarna/KlarnaGatewayService.php:47</code>) &mdash; Klarna is the only provider
+          that reads its order id/token this way. It's also an outlier <em>within Klarna's own code</em>:
+          <code>KlarnaGatewayService::capture()</code>/<code>voidAuthorization()</code>/<code>refund()</code>
+          all take the already-created <code>Order</code> model directly, which exposes
+          <code>getOrderId()</code> (<code>app/model/Orders/Order.php:632</code>) and <code>getToken()</code>
+          (<code>:583</code>) reading straight off the persisted order record, with no cache dependency at all.
+          Only <code>authorize()</code>, via <code>mapOrder()</code>, goes through the cache-backed quote instead
+          of the source that's already sitting right there and already used by its sibling methods.
+        </div>
+        <div class="factor-desc">
+          The team has already run into this: <code>module.klarna.php</code> has a
+          <code>patchQuoteOrderAssociation(Cart $quote, Order $order)</code> helper
+          (<code>:592-629</code>) called immediately before <code>authorize()</code>, which copies
+          <code>$order-&gt;getOrderId()</code> onto the quote unconditionally, and
+          <code>$order-&gt;getToken()</code> onto it only when experiment flag
+          <code>EXPERIMENT_PATCH_KLARNA_QUOTE_ORDER_TOKEN</code> is on. That's a symptom patch on the one object
+          passed into that call, not a fix for the underlying cache entries &mdash; and the order-token half of
+          it doesn't apply at all unless that experiment is enabled.
+        </div>
+      </div>
+    </div>
   </div>
 
   <h2>Timeline</h2>
