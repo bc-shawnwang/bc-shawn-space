@@ -159,6 +159,13 @@ nav.toc a{text-decoration:none;}
 footer{margin-top:64px;color:var(--muted);font-family:var(--mono);font-size:12px;display:flex;gap:18px;flex-wrap:wrap;}
 footer a{color:var(--muted);}
 footer a:hover{color:var(--amber);}
+
+/* screenshots */
+figure.shot{margin:12px 0 22px;}
+figure.shot img{display:block;width:100%;height:auto;border:1px solid var(--border);border-radius:10px;background:#fff;}
+figure.shot figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;}
+ol.legend{margin:10px 0 20px;padding-left:20px;font-size:13.5px;}
+ol.legend li{margin-bottom:8px;}
 </style>
 </head>
 <body>
@@ -486,6 +493,18 @@ fragment VariantPricing on Prices {
   <h2 id="plp">3. Stencil Storefront PLP</h2>
   <p>The data is <code>category.products.*.price</code> on a category page. Brand and search pages follow the same pattern with their own flags (<code>pricesFromGqlForBrands</code>, <code>pricesFromGqlForSearch</code>). I traced the category one.</p>
 
+  <h3>What it looks like</h3>
+  <figure class="shot">
+    <img src="images/plp-price-display.webp" alt="Category page product grid. A single price on one card, a Was and Now price on another, and a price range on a third, each underlined in red." loading="lazy">
+    <figcaption>A category page (<code>/shop-all/</code>) on a dev store. The three red underlines are the price shapes covered below.</figcaption>
+  </figure>
+  <ol class="legend">
+    <li><strong>[Sample] Utility Caddy, <code>$68.93</code>.</strong> One price, printed from <code>price.with_tax</code> or <code>price.without_tax</code> depending on the tax display setting. The template prints whichever side exists, so I can't tell from the screenshot which one this is.</li>
+    <li><strong>[Sample] Canvas Laundry Cart, <code>Was: $373.50</code> and <code>Now: $300.00</code>.</strong> <code>Was</code> is <code>price.non_sale_price_with_tax</code> (the base price) and <code>Now</code> is <code>price.with_tax</code> (the calculated price). The base price only shows because it is higher than the calculated price.</li>
+    <li><strong>[Sample] 1 L Le Parfait Jar, <code>$7.50 - $12.00</code>.</strong> <code>price.price_range</code>: the lowest and highest variant price, from <code>min.with_tax</code> and <code>max.with_tax</code>. This is the second sample output further down.</li>
+  </ol>
+  <p class="small muted">The card template <code>templates/components/products/card.html</code> in the Cornerstone theme renders <code>components/products/price</code> with <code>price=price</code>. If <code>price.price_range</code> exists and the theme setting <code>price_ranges</code> is on (it is <code>true</code> in <code>config.json</code>), it uses <code>components/products/price-range</code> instead. The <code>Was</code> and <code>Now</code> labels are theme settings with language fallbacks, so another theme or store can word them differently.</p>
+
   <h3>The flag</h3>
   <p>Set <code>STRF-14727.Prices_from_gql_for_categories</code> to <code>enable</code>. The flag is a <strong>string</strong> variation (<code>enable</code> or <code>enabled</code> turns it on), so a literal <code>"true"</code> would not count. Source: storefront: <code>utils/ld/LDUtils.scala:68</code>.</p>
 
@@ -665,6 +684,13 @@ fragment VariantPricing on Prices {
   <!-- ================================================================ -->
   <h2 id="pdp">4. Stencil Storefront PDP</h2>
   <p>The data is <code>product.price</code> on a product page. The decoder and encoder are the same as the PLP, so the key table in section 3 applies. What differs is the flag, the query, how a selected variant is priced, and tax display.</p>
+
+  <h3>What it looks like</h3>
+  <figure class="shot">
+    <img src="images/pdp-price-display.webp" alt="Product detail page for the Canvas Laundry Cart with a Was price and a Now price circled in red." loading="lazy">
+    <figcaption>The detail page (<code>/canvas-laundry-cart/</code>) for the same product as the Was and Now card above.</figcaption>
+  </figure>
+  <p><code>Was: $373.50</code> is <code>product.price.non_sale_price_with_tax</code> and <code>Now: $300.00</code> is <code>product.price.with_tax</code>, the same two keys as on the card. The detail page renders <code>product.price</code> through the same <code>components/products/price</code> partial (<code>product-view.html</code> passes <code>price=product.price</code>). It also prints a "you save" line from <code>price.saved</code>, and an RRP row from <code>price.rrp_with_tax</code>. Neither appears in the screenshot, and the template hides each row when its key is absent.</p>
 
   <h3>The flag and its gating</h3>
   <p>Set <code>STRF-14355.Migrate_price_data_to_gql_for_product_details</code> (<code>priceDataFromGQLInProductDetails</code>) to <code>enable</code>. Like the PLP flag it is a string variation. With it on, the encoder writes <code>price</code> (and <code>bulk_discount_rates</code>, <code>can_purchase</code>, <code>cart_url</code>, <code>show_quantity_input</code>, <code>cart_order_source</code>) from the GraphQL result. Prices are included in the query only when <code>showProductPrice</code> is on for this shopper.</p>
