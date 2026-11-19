@@ -165,8 +165,149 @@ footer a:hover{color:var(--amber);}
 <main>
   <div class="eyebrow"><span class="dot"></span><a href="../../index.html">bc-shawn-space</a><span class="sep">/</span><a href="../index.html">Pricing Learning</a><span class="sep">/</span>Understand Pricing Service</div>
   <h1>Understand Pricing Service <span class="badge wip">WIP</span></h1>
-  <p class="lede">WIP</p>
+  <p class="lede">A high-level walk through <code>TaxPricingPrototype.ListEstimatedTaxProductPrices</code>: the process, the branches, and which step fetches, changes or overrides which price.</p>
+  <div class="callout blue"><strong>Scope:</strong> this RPC only. Read from the code in <code>pricing/src/main/scala/com/bigcommerce/catalog/pricing</code> (<code>TaxPricingImpl</code>, <code>PricingService</code>, <code>OverviewPricingService</code>, <code>PriceResolutionService</code>). Not run against a store. Catalog's own <code>calculated_price</code> logic is in the catalog service, which I did not read.</div>
+
+  <nav class="toc"><div class="title">On this page</div><ol>
+    <li><a href="#pipeline">The pipeline</a></li>
+    <li><a href="#mode">Which pricing mode applies</a></li>
+    <li><a href="#override">What overrides what</a></li>
+    <li><a href="#branches">The five calculation branches</a></li>
+    <li><a href="#adjust">What changes <code>calculated_price</code></a></li>
+    <li><a href="#final">To the final response</a></li>
+    <li><a href="#owners">Who owns which field</a></li>
+  </ol></nav>
+
+  <h2 id="pipeline">1. The pipeline</h2>
+  <p class="flow-caption">One request. Loops every 8s.</p>
+  <div class="flow">
+    <div class="node"><span class="tag">Step 0</span><b>Context</b><small>store, group, channel, currency, exchange rate</small></div>
+    <div class="node grpc"><span class="tag">Step 1</span><b>Catalog fetch</b><small><code>ListCatalogPrices</code>, then &times; exchange rate</small></div>
+    <div class="node"><span class="tag">Step 2</span><b>Pricing mode</b><small>PriceList, Discounts or None</small></div>
+    <div class="node"><span class="tag">Step 3</span><b>Resolve base prices</b><small>price list records override catalog</small></div>
+    <div class="node"><span class="tag">Step 4</span><b>Branch + adjust</b><small>pick prices, then change <code>calculated_price</code></small></div>
+    <div class="node http"><span class="tag">Step 5</span><b>Round, tax, saved</b><small>in-process Tax</small></div>
+    <div class="node"><span class="tag">Done</span><b>Response</b><small>request order</small></div>
+  </div>
+  <ul>
+    <li><strong>Context.</strong> If the request has no exchange rate, it is looked up from the currency projection, together with the decimal places.</li>
+    <li><strong>Catalog fetch.</strong> One call returns, per item, the base product price, every variant's price, the selected variant, option set and product rules, picklists and bulk tiers. Every money value is multiplied by the exchange rate (percentage rules are not). A flag caches catalog data by product ID, only for items with no variant and no options.</li>
+    <li><strong>Steps 2 and 3</strong> are the next two sections. <strong>Steps 4 and 5</strong> follow after them.</li>
+  </ul>
+
+  <h2 id="mode">2. Which pricing mode applies</h2>
+  <p>Decided from the customer group and channel, by <code>PricingPriceListAssignmentService</code>. The first match wins.</p>
+  <div class="card-table"><table>
+    <thead><tr><th>#</th><th>Condition</th><th>Mode</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>A price list is assigned to the customer group, or to the group and channel (price lists feature on)</td><td><strong>PriceList</strong></td></tr>
+      <tr><td>2</td><td>A channel-wide price list (customer group 0), and the group has no discounts (both features on)</td><td><strong>PriceList</strong></td></tr>
+      <tr><td>3</td><td>The group has customer group discounts (feature on)</td><td><strong>Discounts</strong></td></tr>
+      <tr><td>4</td><td>Anything else</td><td><strong>None</strong>, plain catalog prices</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">So a price list and customer group discounts never apply together. A channel-wide price list loses to the group's discounts. The result is cached per store, group and channel.</p>
+
+  <h2 id="override">3. What overrides what</h2>
+  <div class="card-table"><table>
+    <thead><tr><th>Source</th><th>Replaces</th><th>Leaves alone</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Price list record</strong> (PriceList mode)</td><td>For each variant that has a record: <code>price</code>, <code>calculated</code>, <code>sale</code>, <code>retail</code>, <code>MAP</code>, and the bulk tiers of the selected variant</td><td>The base product price. A variant with no record keeps its catalog prices, except on an inc/ex-tax price list, where it gets null or zero prices.</td></tr>
+      <tr><td><strong>Option set and product rules</strong></td><td><code>calculated_price</code> only</td><td>Everything else</td></tr>
+      <tr><td><strong>Customer group discount</strong> (Discounts mode)</td><td><code>calculated_price</code>, and the price range min and max</td><td><code>price</code>, <code>sale</code>, <code>retail</code></td></tr>
+      <tr><td><strong>Picklist prices</strong></td><td>Added onto <code>calculated_price</code></td><td>Everything else</td></tr>
+      <tr><td><strong>Tax</strong></td><td>Nothing. It adds the inc and ex amounts next to the as-entered amount.</td><td>The as-entered amounts</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="branches">4. The five calculation branches</h2>
+  <p>After the base prices are resolved, each item takes exactly one branch. The branch depends on what catalog returned and on store settings. It decides where every response field comes from. Pick one:</p>
+  <div class="switcher">
+    <div class="label">Branch</div>
+    <div class="seg" id="br-seg">
+      <button data-b="none" aria-pressed="true">noPurchasableVariant</button>
+      <button data-b="single" aria-pressed="false">singleSelectedVariantPrice</button>
+      <button data-b="range" aria-pressed="false">singleSelectedVariantPriceAndRange</button>
+      <button data-b="partial" aria-pressed="false">partial selection</button>
+      <button data-b="default" aria-pressed="false">no selection</button>
+    </div>
+    <div class="out" id="br-out"></div>
+  </div>
+  <div class="card-table"><table>
+    <thead><tr><th>Branch</th><th>Method</th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td><strong>noPurchasableVariant</strong></td><td><code>noPurchasableVariant</code></td><td>Catalog returned no selected variant and no variants. Also what a missing item looks like.</td></tr>
+      <tr><td><strong>singleSelectedVariantPrice</strong></td><td><code>singleSelectedVariantPrice</code></td><td>A selected variant, no variant list. This is a request with a product ID and a variant ID.</td></tr>
+      <tr><td><strong>singleSelectedVariantPriceAndRange</strong></td><td><code>singleSelectedVariantPriceAndRange</code></td><td>The options fully resolve to one variant, and other variants exist.</td></tr>
+      <tr><td><strong>partial selection</strong></td><td><code>toOverviewPriceWithRangesForPartialSelections</code></td><td>The options do not resolve to a variant, and the store prices that from the base product (<code>partialSelectionLowestVariantPrice</code> off with options, or <code>productOverviewUseLowestVariantPrice</code> off with pre-selected options). Skipped on an inc/ex price list.</td></tr>
+      <tr><td><strong>no selection</strong></td><td><code>toOverviewPriceWithRanges</code></td><td>Everything else. This is the usual product listing case.</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><strong>Base product in the range.</strong> The base price joins the min and max candidates only when the product has no required options and <code>productOverviewUseLowestVariantPrice</code> is off.</li>
+    <li><strong>Ties.</strong> The cheapest variant is sorted on <code>calculated_price</code> at currency precision, then on retail price, to match bcapp.</li>
+    <li><strong>Null prices.</strong> When a calculated price is null (or becomes null after adjusting), the item gets an empty price, not zero. Zero prices come from a missing selected variant.</li>
+    <li><strong><code>retail_price_range</code></strong> is built from the variants whose retail price is above their calculated price. It is empty when the min and max are equal.</li>
+    <li><strong>Bulk tiers.</strong> The selected variant's price record tiers if there is one, otherwise catalog's. They are dropped if any variant came from a price list. They are returned as data and never change <code>calculated_price</code>.</li>
+  </ul>
+
+  <h2 id="adjust">5. What changes <code>calculated_price</code></h2>
+  <p><code>adjustPrice</code> runs these in order, on the price the branch picked:</p>
+  <ol>
+    <li><strong>Option set rules</strong>: percentage, relative or fixed.</li>
+    <li><strong>Product rules</strong>: percentage, relative or fixed.</li>
+    <li><strong>Customer group discount</strong>, Discounts mode only. Product discount wins. Without one, the lowest category discount (if it beats the price). Without one, the sitewide discount. Methods: percent off, price off (&times; exchange rate), fixed price, and the two markup methods (flag-gated).</li>
+    <li><strong>Picklist prices</strong> are added. If any picklist price is null, the result is null.</li>
+    <li><strong>Floor at 0.</strong></li>
+  </ol>
+  <div class="callout amber"><strong>Easy to miss:</strong> the price range min and max get customer group discounts, but not option rules or picklists. A code comment says this matches bcapp. So the range can disagree with <code>calculated_price</code> when rules apply.</div>
+
+  <h2 id="final">6. To the final response</h2>
+  <ol>
+    <li><strong>Round</strong> every price to the currency's decimal places, before tax.</li>
+    <li><strong>Resolve "entered as"</strong> per item: the price list's inc or ex flag, or the global tax catalog setting.</li>
+    <li><strong>Tax.</strong> The in-process Tax RPC prices <code>calculated</code>, <code>price</code>, <code>sale</code>, <code>retail</code>, <code>MAP</code>, both range ends, and monetary bulk tiers. Each becomes <code>{ as_entered, inc_tax, ex_tax }</code>. If the tax call fails, it is logged and each price falls back to inc = ex = the as-entered amount.</li>
+    <li><strong><code>saved</code></strong> is computed last, only when retail is greater than calculated: <code>retail &minus; calculated</code>, for all three amounts.</li>
+    <li><strong>Order.</strong> The response is put back in request order and bulk tiers are sorted by minimum quantity. An item with no result comes back with a null <code>calculated_price</code>.</li>
+  </ol>
+  <p class="small muted">The response is <code>ListEstimatedTaxPricesRespProto(prices, calculation logs)</code>. The logs are filled only when the request sets <code>include_calculation_data</code>.</p>
+
+  <h2 id="owners">7. Who owns which field</h2>
+  <div class="card-table"><table>
+    <thead><tr><th>Response field</th><th>Starts from</th><th>Changed by</th></tr></thead>
+    <tbody>
+      <tr><td><code>price</code>, <code>sale_price</code>, <code>retail_price</code>, <code>minimum_advertised_price</code></td><td>Catalog</td><td>A price list record (per variant). Never by rules or discounts.</td></tr>
+      <tr><td><code>calculated_price</code></td><td>Catalog, or the price list record</td><td>Option set rules, product rules, discount, picklists</td></tr>
+      <tr><td><code>price_range</code></td><td>Variant <code>calculated_price</code> min and max</td><td>Discounts only</td></tr>
+      <tr><td><code>retail_price_range</code></td><td>Variant retail prices</td><td>Nothing</td></tr>
+      <tr><td><code>bulk_tiers</code></td><td>Catalog, or the price list record</td><td>Nothing</td></tr>
+      <tr><td>Inc and ex amounts of each price above</td><td>That price's own as-entered amount, taxed with the item's tax class</td><td>Tax RPC. One line per price: <code>calculated</code>, <code>price</code>, <code>sale</code>, <code>retail</code>, <code>MAP</code>, both range ends, each monetary bulk tier.</td></tr>
+      <tr><td><code>saved</code></td><td><code>retail_price &minus; calculated_price</code>, subtracted separately for the as-entered, inc and ex amounts</td><td>Only present when retail (as entered) is greater than calculated. Computed after tax.</td></tr>
+    </tbody>
+  </table></div>
+
   <footer><a href="../index.html">&larr; back to Pricing Learning</a></footer>
 </main>
+<script>
+(function(){
+  var D={
+    none:{calc:["Base product <code>calculated_price</code>, adjusted","yes"],price:["Base product","yes"],sale:["Base product <code>sale</code>, <code>retail</code>, <code>MAP</code>","yes"],range:["<code>[calc, calc]</code>","yes"],note:"Price list records are not used here: they only replace variant prices, and this item has none."},
+    single:{calc:["Selected variant <code>calculated_price</code>, adjusted","yes"],price:["Selected variant (price list record if any)","yes"],sale:["Selected variant <code>sale</code>, <code>retail</code>, <code>MAP</code>","yes"],range:["<code>[calc, calc]</code>","yes"],note:"No variant list, so the range cannot be wider than the one price."},
+    range:{calc:["Selected variant <code>calculated_price</code>, adjusted","yes"],price:["Selected variant (price list record if any)","yes"],sale:["Selected variant <code>sale</code>, <code>retail</code>, <code>MAP</code>","yes"],range:["Min to max of all variants, discounts only","yes"],note:"Same as the previous branch, plus a range across the variants. A null selected variant gives an empty price."},
+    partial:{calc:["Base product <code>calculated_price</code>, with option set rules, product rules and picklists","yes"],price:["Base product","yes"],sale:["Base product <code>sale</code>, <code>retail</code>, <code>MAP</code>","yes"],range:["No options: min to max of variants (and base). Options present: <code>[calc, calc]</code>","yes"],note:"The only branch that reads the base product price while variants exist. One flag also lifts a single-point range to the calculated price."},
+    default:{calc:["The cheapest variant's <code>calculated_price</code>, adjusted with <b>no</b> rules or picklists","yes"],price:["The cheapest variant","yes"],sale:["The cheapest variant <code>sale</code>, <code>retail</code>, <code>MAP</code>","yes"],range:["Min to max of variants, plus base when it has no required options","yes"],note:"Used for listings, where no options are chosen. No rules apply because the selection is incomplete."}
+  };
+  var out=document.getElementById("br-out"),seg=document.getElementById("br-seg");
+  function show(k){
+    var d=D[k];
+    out.innerHTML=[["calculated_price",d.calc],["price",d.price],["sale / retail / MAP",d.sale],["price_range",d.range]].map(function(x){
+      return '<div class="cell '+x[1][1]+'"><span class="k">'+x[0]+'</span>'+x[1][0]+'</div>';
+    }).join("")+'<div class="note">'+d.note+'</div>';
+    Array.prototype.forEach.call(seg.children,function(b){b.setAttribute("aria-pressed",b.dataset.b===k?"true":"false");});
+  }
+  seg.addEventListener("click",function(e){var b=e.target.closest("button");if(b)show(b.dataset.b);});
+  show("none");
+})();
+</script>
 </body>
 </html>
