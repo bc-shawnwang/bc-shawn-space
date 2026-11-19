@@ -166,6 +166,8 @@ figure.shot img{display:block;width:100%;height:auto;border:1px solid var(--bord
 figure.shot figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;}
 ol.legend{margin:10px 0 20px;padding-left:20px;font-size:13.5px;}
 ol.legend li{margin-bottom:8px;}
+h3.part{font-size:17px;font-weight:650;margin:44px 0 8px;padding-top:16px;border-top:1px solid var(--border);}
+h4.sub{font-size:15.5px;font-weight:650;margin:30px 0 8px;color:var(--text);text-transform:none;letter-spacing:0;}
 </style>
 </head>
 <body>
@@ -339,11 +341,11 @@ fragment Pricing on Prices {
 }</pre>
 
   <h4>Variant level A: select the variant on <code>product(...)</code></h4>
-  <p class="small muted">This is what the Stencil PDP does. <code>product</code> accepts <code>variantEntityId</code>, <code>sku</code> or <code>optionValueIds</code>, plus <code>useDefaultOptionSelections</code>. <code>priceRange</code> is left out of this sample: it is in the real response, but I did not verify what the service returns for one fully selected variant.</p>
+  <p class="small muted">The Stencil PDP does this with <code>sku</code> or <code>optionValueIds</code>. <code>product</code> also accepts <code>variantEntityId</code> and <code>useDefaultOptionSelections</code>. <code>priceRange</code> is left out of this sample: it is in the real response, but I did not verify what the service returns for one fully selected variant.</p>
   <span class="file">1. GraphQL request</span>
 <pre class="code">query {
   site {
-    product(entityId: 112, variantEntityId: 321) {     <span class="c"># or sku: "ABC-1", or optionValueIds: [{ optionEntityId: 5, valueEntityId: 10 }, ...]</span>
+    product(entityId: 112, sku: "ABC-1") {     <span class="c"># or optionValueIds: [{ optionEntityId: 5, valueEntityId: 10 }, ...], or variantEntityId: 321</span>
       entityId
       pricesWithTax:    prices(includeTax: true,  currencyCode: USD) { ...VariantPricing }
       pricesWithoutTax: prices(includeTax: false, currencyCode: USD) { ...VariantPricing }
@@ -364,7 +366,7 @@ fragment VariantPricing on Prices {
   "variantId": { "value": 321 },
   "optionValues": [ { "optionId": 5, "valueId": 10 }, { "optionId": 6, "valueId": 20 } ]
 }]</pre>
-  <p class="small muted">The variant and option values come from the catalog <code>selected_options</code> on the product node. I did not verify how catalog fills <code>option_value_ids</code> for a <code>variantEntityId</code> lookup, so treat the option values as expected rather than confirmed.</p>
+  <p class="small muted">The variant and option values come from the catalog <code>selected_options</code> on the product node. I did not verify how catalog fills <code>option_value_ids</code> for a <code>sku</code> lookup, so treat the option values as expected rather than confirmed.</p>
   <span class="file">3. gRPC response</span>
 <pre class="code">{
   "productPrices": [{
@@ -692,14 +694,17 @@ fragment VariantPricing on Prices {
   </figure>
   <p><code>Was: $373.50</code> is <code>product.price.non_sale_price_with_tax</code> and <code>Now: $300.00</code> is <code>product.price.with_tax</code>, the same two keys as on the card. The detail page renders <code>product.price</code> through the same <code>components/products/price</code> partial (<code>product-view.html</code> passes <code>price=product.price</code>). It also prints a "you save" line from <code>price.saved</code>, and an RRP row from <code>price.rrp_with_tax</code>. Neither appears in the screenshot, and the template hides each row when its key is absent.</p>
 
-  <h3>The flag and its gating</h3>
+  <h3 class="part">Part 1: Page load</h3>
+  <p>The browser makes one page request, for example <code>GET /product/?sku=ABC-1</code>. While rendering it, the storefront service builds the <code>stencilProductDetailsResource</code> query and runs it with <code>GraphQLService.execute</code> against its own Storefront GraphQL schema. There is no extra HTTP call. Everything in this part happens inside that one query.</p>
+
+  <h4 class="sub">The flag and its gating</h4>
   <p>Set <code>STRF-14355.Migrate_price_data_to_gql_for_product_details</code> (<code>priceDataFromGQLInProductDetails</code>) to <code>enable</code>. Like the PLP flag it is a string variation. With it on, the encoder writes <code>price</code> (and <code>bulk_discount_rates</code>, <code>can_purchase</code>, <code>cart_url</code>, <code>show_quantity_input</code>, <code>cart_order_source</code>) from the GraphQL result. Prices are included in the query only when <code>showProductPrice</code> is on for this shopper.</p>
 
-  <h3>The query</h3>
+  <h4 class="sub">The query</h4>
   <p>Built in <code>storefront: stencil/pageobjects/productdetails/service/StencilProductDetailsQueryBuilder.scala</code>. Three aliases select the same <code>Product</code> type. Most selections are trimmed here.</p>
 <pre class="code">query stencilProductDetailsResource {
   site {
-    <span class="c"># only when the URL has ?sku= or option params</span>
+    <span class="c"># only when the URL has ?sku= or ?attributes=</span>
     productVariant: product(entityId: 112, sku: "ABC-1") { ...ProductFields }
     <span class="c"># always</span>
     defaultSelectionProduct: product(entityId: 112 useDefaultOptionSelections: true)  { ...ProductFields }
@@ -720,14 +725,26 @@ fragment Pricing on Prices {
   priceRange { min {...} max {...} }  retailPriceRange { min {...} max {...} }
   bulkPricing { __typename minimumQuantity maximumQuantity ... }
 }</pre>
-  <p class="small muted">With <code>sku</code> and option params both present, only <code>sku</code> is used. There is no <code>variants { prices }</code> selection: a variant price comes from the <code>prices</code> field of a <code>product(...)</code> alias that carries a selection.</p>
+  <p class="small muted">With <code>?sku=</code> and <code>?attributes=</code> both present, only <code>sku</code> is used. There is no <code>variants { prices }</code> selection: a variant price comes from the <code>prices</code> field of a <code>product(...)</code> alias that carries a selection.</p>
 
-  <h3>How a variant selection reaches the Pricing service</h3>
+  <h4 class="sub">How a variant selection reaches the Pricing service</h4>
+  <p>The page URL decides what goes into the query above:</p>
+  <div class="card-table"><table>
+    <thead><tr><th>URL parameter</th><th>Read by</th><th>Effect on the query</th></tr></thead>
+    <tbody>
+      <tr><td><code>?sku=ABC-1</code></td><td><code>SkuRequestParamExtractor</code></td><td>Adds <code>productVariant: product(entityId: 112, sku: "ABC-1")</code></td></tr>
+      <tr><td><code>?attributes=&lt;base64url&gt;</code></td><td><code>OptionPrefilledValuesExtractor</code></td><td>The value is a base64url-encoded JSON object keyed by option ID. Its option-to-value ID pairs become <code>optionValueIds: [{ optionEntityId, valueEntityId }, ...]</code> on <code>productVariant</code>. I did not read how non-multiple-choice values are handled.</td></tr>
+      <tr><td>neither</td><td>none</td><td>No <code>productVariant</code> alias. <code>defaultSelectionProduct</code> and <code>baseProduct</code> are still queried.</td></tr>
+    </tbody>
+  </table></div>
+  <p>From there:</p>
   <ol>
-    <li>The <code>product</code> resolver passes <code>variantEntityId</code>, <code>optionValueIds</code>, <code>sku</code> and <code>useDefaultOptionSelections</code> to the catalog fetch.</li>
+    <li>The <code>product</code> resolver passes <code>variantEntityId</code>, <code>optionValueIds</code>, <code>sku</code> and <code>useDefaultOptionSelections</code> to the catalog fetch. The PDP query uses only <code>sku</code>, <code>optionValueIds</code> and <code>useDefaultOptionSelections</code>.</li>
     <li>Catalog returns <code>selected_options</code>: <code>option_value_ids[]</code> and an optional <code>variant_id</code>. The proto says it is empty when there is no overlay.</li>
     <li>That becomes <code>VariantSelectedOptions</code> on the product. <code>ProductPricesResolver</code> builds the Fetcher key from it, so the gRPC item carries the variant and option values.</li>
+    <li>The Fetcher batches the items into one <code>ListEstimatedTaxProductPrices</code> call (section 1). The prices are decoded into <code>product.price</code> and into <code>BCData.product_attributes.price</code> (section 2).</li>
   </ol>
+
 
   <p>Pick the URL to see which items reach <code>requested_items</code> in a single <code>ListEstimatedTaxProductPrices</code> call (section 1). The IDs are made up.</p>
   <div class="switcher" id="sw-pdp">
@@ -737,19 +754,19 @@ fragment Pricing on Prices {
     <div class="out" style="margin-top:6px;"></div>
   </div>
 
-  <h3>Which price <code>product.price</code> uses</h3>
+  <h4 class="sub">Which price <code>product.price</code> uses</h4>
   <p>The decoder reads each alias with the same price decoder, then <code>resolveVariantValue</code> prefers the selected variant's price and falls back to the base product's. The variant used is <code>productVariant.filter(isVariant).orElse(defaultSelectionProduct)</code>, where <code>isVariant</code> needs at least one selected variant-option value.</p>
   <div class="card-table"><table>
     <thead><tr><th>Request</th><th><code>product.price</code> comes from</th></tr></thead>
     <tbody>
-      <tr><td><code>?sku=</code> or option params selecting a variant</td><td><code>productVariant.prices</code>, a specific variant in the gRPC item</td></tr>
+      <tr><td><code>?sku=</code> or <code>?attributes=</code> selecting a variant</td><td><code>productVariant.prices</code>, a specific variant in the gRPC item</td></tr>
       <tr><td>No params, merchant default option selections</td><td><code>defaultSelectionProduct.prices</code>, if <code>isVariant</code> holds</td></tr>
       <tr><td>No params, no defaults</td><td><code>baseProduct.prices</code>: the product-level price and range</td></tr>
     </tbody>
   </table></div>
   <p class="small muted">If the chosen variant has no price, the decoder falls back to the base price without any error.</p>
 
-  <h3>How the PDP differs from the PLP</h3>
+  <h4 class="sub">How the PDP differs from the PLP</h4>
   <div class="card-table"><table>
     <thead><tr><th></th><th>PLP</th><th>PDP</th></tr></thead>
     <tbody>
@@ -763,6 +780,17 @@ fragment Pricing on Prices {
   <div class="callout amber"><strong>Caching.</strong> The PDP page object is cached. When prices are included the cache key is <code>StencilProductDetailsPOWithPricesV3</code> plus the currency and the customer ID. I did not check whether the customer group is part of the key. Source: storefront: <code>cache/CacheUtils.scala</code> around line 741.</div>
 
   <div class="callout red"><span class="badge unverified">unverified</span> <strong>Not checked:</strong> how catalog fills <code>selected_options.variant_id</code> for a <code>?sku=</code> lookup versus a full option match, and whether the three aliases always land in one Fetcher batch. They resolve in the same GraphQL execution, so I expect one batch, but I did not confirm Sangria's timing.</div>
+
+  <h3 class="part">Part 2: After load (option change)</h3>
+  <p>When the shopper changes an option on the page, the theme calls <code>POST /remote/v1/product-attributes/{productId}</code>. The storefront service proxies that call to bcapp. Section 2 covers the call itself. Compared with part 1:</p>
+  <ul>
+    <li><strong>What triggers it.</strong> The theme in the browser: once on page load, and on every option change.</li>
+    <li><strong>Who makes the call.</strong> The browser. The storefront service only proxies it to bcapp.</li>
+    <li><strong>Which API.</strong> The remote API, with the serialized product form as the body. It is not GraphQL: the Cornerstone theme (<code>assets/js</code>) contains no GraphQL calls, so after load its browser code never asks Storefront GraphQL for a variant price. Other themes could differ; I only read Cornerstone.</li>
+    <li><strong>Whether it reaches the Pricing service.</strong> Not confirmed. bcapp prices this response, and I cannot see bcapp.</li>
+    <li><strong>Where the result lands.</strong> <code>response.data</code>, applied by <code>updateView</code>. The option-change call also asks for the <code>products/bulk-discount-rates</code> template, so <code>response.content</code> is rendered too.</li>
+  </ul>
+  <p class="small muted">So the selection in the URL when the page is rendered is priced through GraphQL (part 1). A selection the shopper makes afterwards is priced through this call.</p>
 
   <hr class="sep">
 
