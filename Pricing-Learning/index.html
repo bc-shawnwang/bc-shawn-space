@@ -321,6 +321,12 @@ footer a:hover{color:var(--amber);}
         <td><span class="badge wip">WIP</span> only the call is confirmed</td>
       </tr>
       <tr>
+        <td><strong>bcapp</strong><br><span class="muted small">repo <code>bigcommerce</code></span></td>
+        <td><code>Pricing.FindPriceListAssignment</code><br><code>PriceLists.GetPriceRecordCollection</code></td>
+        <td>Price list and price records for <code>POST /remote/v1/product-attributes</code>. bcapp calculates the price itself.</td>
+        <td><span class="badge live">documented</span> <a href="Understand-Client-Side/index.html#product-attributes">section 2</a></td>
+      </tr>
+      <tr>
         <td><strong>Cart / Checkout</strong><br><span class="muted small">includes Manual Order</span></td>
         <td colspan="2" class="muted"><code>CartPricing</code> and <code>Discounts</code> are registered by the service, but I have not confirmed the callers.</td>
         <td><span class="badge wip">WIP</span></td>
@@ -333,7 +339,7 @@ footer a:hover{color:var(--amber);}
     </tbody>
   </table></div>
 
-  <div class="callout blue"><strong>bcapp is not a verified client.</strong> Storefront has a second pricing client that calls bcapp at <code>/internalapi/v1/pricing/products</code>. That is a parallel implementation of the same job, selected by flag, not a caller of the Pricing service. Whether bcapp itself calls the Pricing service is unconfirmed.</div>
+  <div class="callout blue"><strong>bcapp calls the Pricing service differently.</strong> For <code>POST /remote/v1/product-attributes</code> it calls <code>FindPriceListAssignment</code> and the Price Lists RPC for data, and does the price calculation and tax itself in PHP. It does not call <code>ListEstimatedTaxProductPrices</code>. Storefront also has a second pricing client that calls bcapp at <code>/internalapi/v1/pricing/products</code>, selected by flag. Details are in section 2 of the Client Side page.</div>
 
   <footer><a href="../index.html">&larr; back to index</a></footer>
 </main>
