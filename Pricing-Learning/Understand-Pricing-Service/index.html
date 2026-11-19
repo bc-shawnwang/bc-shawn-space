@@ -232,6 +232,7 @@ footer a:hover{color:var(--amber);}
     <li><a href="#questions">A. Questions it answers</a></li>
     <li><a href="#factors">B. What decides a price</a></li>
     <li><a href="#relations">C. How the prices relate</a></li>
+    <li><a href="#open">Open questions</a></li>
     <li><a href="#detail">Detail pages</a></li>
   </ol></nav>
 
@@ -288,7 +289,7 @@ footer a:hover{color:var(--amber);}
       <tr><td><strong>Store</strong></td><td><code>store_id</code></td><td>Scopes everything: catalog data, price lists, discounts, settings and flags are all per store.</td></tr>
       <tr><td><strong>Product, variant and options</strong></td><td><code>requested_items</code>: <code>product_id</code>, <code>variant_id</code>, <code>option_values</code></td><td>Which product and which variant. Options that do not fully resolve to a variant give a price range or the base price instead of one variant's price.</td></tr>
       <tr><td><strong>Customer group</strong></td><td><code>customer_group_id</code></td><td>Decides which price list or discounts apply. Group 0 means everyone.</td></tr>
-      <tr><td><strong>Channel</strong></td><td><code>channel_id</code></td><td>Which channel's catalog prices to read, and which channel-level price list applies.</td></tr>
+      <tr><td><strong>Channel</strong></td><td><code>channel_id</code></td><td>Passed to Catalog as the channel scope (what Catalog does with it is an <a href="#open">open question</a>). Also picks the channel-level price list and the category tree.</td></tr>
       <tr><td><strong>Currency</strong></td><td><code>currency_code</code>, optionally <code>exchange_rate</code> and <code>currency_decimal_precision</code></td><td>The currency to price in. Catalog values are multiplied by the exchange rate, price list records are looked up in this currency, and results are rounded to the decimals.</td></tr>
       <tr><td><strong>Shopper location and identity</strong> <span class="muted small">(tax only)</span></td><td><code>country_code</code>, <code>customer_id</code></td><td>Picks the tax zone, so they change the inc and ex amounts, never the entered price.</td></tr>
       <tr><td><strong>Quantity and the whole cart</strong> <span class="muted small">(cart only)</span></td><td>cart items: <code>quantity</code>, <code>cart_item_id</code></td><td>Decides which bulk tier applies. The tier is chosen from the quantities across the cart.</td></tr>
@@ -340,6 +341,20 @@ footer a:hover{color:var(--amber);}
     </tbody>
   </table></div>
   <p class="small muted">Catalog bulk tiers never take a price below zero. Read from <code>CartPricingService</code> and <code>OverviewPricingService</code>, not run.</p>
+
+  <hr class="sep">
+  <h2 id="open">Open questions</h2>
+  <p>Things this page does not answer yet, because the answer is outside this repo or I have not checked it.</p>
+  <div class="card-table"><table>
+    <thead><tr><th>Question</th><th>What is known</th><th>How to answer it</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Can different channels have different catalog prices?</strong></td><td>The Pricing service sends <code>channel_id</code> in <code>ListCatalogPricesReqProto</code> (<code>CatalogServiceClient.scala:60</code>). The proto field has no comment.</td><td>Read the Catalog service's handler for <code>ListCatalogPrices</code></td></tr>
+      <tr><td><strong>If so, how does it work?</strong> Per-channel price overrides, or the channel only limits which products and variants come back?</td><td>Not visible from this repo. I expect the channel to be a scope, with per-channel prices coming from channel-assigned price lists. That is a guess.</td><td>Same as above, then call it for one product with two channels and compare</td></tr>
+      <tr><td><strong>What does the default channel (ID 1) do?</strong></td><td>For the category tree, the channel is left out when <code>channelId</code> is 1 or less (<code>CatalogServiceClient.scala:130</code>). The price call has no such rule.</td><td>Check Catalog, and the default-channel handling in price list assignment</td></tr>
+      <tr><td><strong>Who calls <code>GetCartPricing</code>, and is it live?</strong></td><td>It is registered in <code>Boot.scala</code>. I did not trace its callers.</td><td>Search bcapp, checkout and storefront for the client</td></tr>
+      <tr><td><strong>What should <code>resetPriceToBaseCatalogPrice</code> do?</strong></td><td>It is read from store settings, but in the code I read it is only logged.</td><td>Ask the Pricing team, or check git history for its intended use</td></tr>
+    </tbody>
+  </table></div>
 
   <hr class="sep">
   <h2 id="detail">Detail pages</h2>
