@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ListEstimatedTaxProductPrices</title>
+<style>
+:root{
+  --bg:#10141b;
+  --surface:#171c25;
+  --surface-2:#1c2230;
+  --border:#2a3140;
+  --border-soft:#232a38;
+  --text:#e9e7e0;
+  --muted:#8b93a3;
+  --amber:#e8a33d;
+  --amber-dim:#4a3c22;
+  --amber-bg:rgba(232,163,61,0.13);
+  --violet:#8b7cf0;
+  --blue-bg:rgba(55,138,221,0.14);
+  --blue-text:#7fb4e8;
+  --teal-bg:rgba(29,158,117,0.16);
+  --teal-text:#63d6ab;
+  --red-bg:rgba(226,92,92,0.14);
+  --red-text:#f09a9a;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+body{-webkit-font-smoothing:antialiased;line-height:1.6;}
+main{max-width:920px;margin:0 auto;padding:56px 24px 96px;}
+a{color:var(--amber);}
+a:hover{text-decoration:underline;}
+
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+.eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--violet);display:inline-block;}
+.eyebrow a{color:var(--muted);text-decoration:none;}
+.eyebrow a:hover{color:var(--amber);}
+.eyebrow .sep{opacity:.5;}
+
+h1{font-size:clamp(26px,3.8vw,36px);line-height:1.18;letter-spacing:-0.01em;margin:0 0 12px;}
+h2{font-size:20px;font-weight:650;margin:56px 0 6px;scroll-margin-top:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+h3{font-size:15.5px;font-weight:650;margin:30px 0 8px;}
+h4{font-size:13px;font-weight:650;margin:22px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+p{margin:0 0 14px;}
+p.lede{color:var(--muted);margin:0 0 28px;max-width:680px;font-size:15px;}
+.muted{color:var(--muted);}
+.small{font-size:12.5px;}
+hr.sep{border:none;border-top:1px solid var(--border);margin:44px 0 0;}
+
+code{background:var(--surface-2);padding:1px 6px;border-radius:4px;font-size:12.5px;font-family:var(--mono);border:1px solid var(--border);word-break:break-word;}
+pre.code{background:#0a0d12;color:#c9d1d9;border-radius:8px;padding:14px 16px;font-size:12px;line-height:1.55;font-family:var(--mono);overflow-x:auto;margin:10px 0 18px;border:1px solid var(--border);white-space:pre;}
+pre.code .k{color:#79c0ff;}      /* keys / types */
+pre.code .s{color:#a5d6a7;}      /* strings */
+pre.code .n{color:#ffa657;}      /* numbers */
+pre.code .c{color:#6e7681;}      /* comments */
+pre.code .f{color:#d2a8ff;}      /* fields / fragments */
+.file{display:block;font-family:var(--mono);font-size:11.5px;color:var(--muted);margin:14px 0 -4px;}
+ul,ol{padding-left:20px;margin:0 0 14px;}
+li{margin-bottom:8px;}
+
+/* badges */
+.badge{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:2px 9px;border-radius:999px;border:1px solid var(--border);color:var(--muted);vertical-align:middle;white-space:nowrap;}
+.badge.wip{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-dim);}
+.badge.live{background:var(--teal-bg);color:var(--teal-text);border-color:rgba(29,158,117,.35);}
+.badge.unverified{background:var(--red-bg);color:var(--red-text);border-color:rgba(226,92,92,.3);}
+
+/* callouts */
+.callout{border-radius:8px;padding:12px 16px;font-size:13.5px;margin:0 0 14px;border:1px solid transparent;}
+.callout.blue{background:var(--blue-bg);color:var(--blue-text);}
+.callout.teal{background:var(--teal-bg);color:var(--teal-text);}
+.callout.amber{background:var(--amber-bg);color:var(--amber);}
+.callout.red{background:var(--red-bg);color:var(--red-text);}
+.callout code{background:rgba(0,0,0,.25);border-color:rgba(255,255,255,.1);color:inherit;}
+.callout strong{color:inherit;}
+
+/* tables */
+.card-table{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow-x:auto;margin:10px 0 20px;}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px;}
+th,td{padding:10px 12px;text-align:left;border-top:1px solid var(--border);vertical-align:top;}
+thead th{border-top:none;font-weight:600;background:var(--surface-2);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+td.t{white-space:nowrap;}
+tr.hl td{background:rgba(232,163,61,.07);}
+
+/* definition grid */
+dl.terms{display:grid;grid-template-columns:minmax(150px,230px) 1fr;gap:0;margin:10px 0 20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+dl.terms dt,dl.terms dd{padding:11px 14px;border-top:1px solid var(--border);margin:0;font-size:13.5px;}
+dl.terms dt:first-of-type,dl.terms dd:first-of-type{border-top:none;}
+dl.terms dt{font-weight:600;color:var(--text);background:var(--surface-2);}
+dl.terms dd{color:var(--text);}
+dl.terms dd .muted{font-size:12.5px;}
+@media(max-width:640px){dl.terms{grid-template-columns:1fr;}dl.terms dt{border-top:1px solid var(--border);}dl.terms dd{border-top:none;}}
+
+/* group headings inside terms */
+.termgroup{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);margin:28px 0 -4px;}
+
+/* page cards (sub page links) */
+ul.pages{list-style:none;margin:0;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
+li.page{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:0;transition:border-color .15s ease, background .15s ease;}
+li.page:hover{border-color:var(--amber-dim);background:var(--surface-2);}
+li.page a{display:block;color:var(--text);font-weight:600;font-size:16px;text-decoration:none;}
+li.page a:hover{color:var(--amber);}
+li.page .desc{color:var(--muted);font-size:13.5px;margin-top:4px;}
+
+/* table of contents */
+nav.toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin:0 0 8px;}
+nav.toc .title{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:28px;}
+nav.toc li{margin-bottom:5px;font-size:13.5px;break-inside:avoid;}
+nav.toc a{text-decoration:none;}
+@media(max-width:640px){nav.toc ol{columns:1;}}
+
+/* animated request chain */
+.flow-caption{color:var(--muted);font-size:12.5px;margin:0 0 10px;}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:6px 0 20px;}
+.flow .node{flex:1 1 150px;min-width:140px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;background:var(--surface);animation:nodePulse 8s infinite ease;}
+.flow .node small{display:block;color:var(--muted);font-size:11px;margin-top:3px;}
+.flow .node b{font-weight:600;}
+.flow .node .tag{font-family:var(--mono);font-size:10.5px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.08em;}
+.flow .node:nth-child(1){animation-delay:0s;}
+.flow .node:nth-child(2){animation-delay:.9s;}
+.flow .node:nth-child(3){animation-delay:1.8s;}
+.flow .node:nth-child(4){animation-delay:2.7s;}
+.flow .node:nth-child(5){animation-delay:3.6s;}
+.flow .node:nth-child(6){animation-delay:4.5s;}
+.flow .node:nth-child(7){animation-delay:5.4s;}
+.flow .node.grpc{--c:29,158,117;}
+.flow .node.http{--c:55,138,221;}
+.flow .node.gql{--c:139,124,240;}
+.flow .node{--c:232,163,61;}
+@keyframes nodePulse{
+  0%,2%{box-shadow:none;border-color:var(--border);}
+  6%{box-shadow:0 0 0 2px rgba(var(--c),.5);border-color:rgb(var(--c));}
+  16%,100%{box-shadow:none;border-color:var(--border);}
+}
+@media(prefers-reduced-motion:reduce){.flow .node{animation:none;}html{scroll-behavior:auto;}}
+
+/* interactive switcher */
+.switcher{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:10px 0 20px;}
+.switcher .label{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.seg{display:inline-flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.seg button{font:inherit;font-size:12.5px;font-family:var(--mono);background:var(--surface-2);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;}
+.seg button:hover{color:var(--text);}
+.seg button[aria-pressed="true"]{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-dim);}
+.out{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;}
+.out .cell{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:10px 12px;font-size:13px;}
+.out .cell .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:3px;}
+.out .cell.yes{border-color:rgba(29,158,117,.45);}
+.out .cell.no{opacity:.6;}
+.out .note{grid-column:1/-1;font-size:13px;color:var(--muted);}
+.items{margin-top:12px;}
+.items .row{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:12.5px;}
+.items .row .alias{font-family:var(--mono);color:var(--violet);min-width:190px;}
+.items .row .item{font-family:var(--mono);color:#c9d1d9;}
+.items .row.dedup{opacity:.55;}
+
+/* field lifecycle */
+.life-ctl{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:10px 0 10px;}
+.life-ctl .seg{margin:0;}
+.life-ctl .play{font:inherit;font-size:12.5px;font-family:var(--mono);background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-dim);border-radius:6px;padding:6px 14px;cursor:pointer;}
+.life-ctl .play:hover{filter:brightness(1.15);}
+.life-ctl .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+table.life{min-width:820px;table-layout:fixed;}
+table.life th.f,table.life td.f{width:200px;word-break:break-word;}
+table.life td.f{font-family:var(--mono);font-size:12px;background:var(--surface-2);cursor:pointer;}
+table.life td.f:hover{color:var(--amber);}
+table.life tr.sel td.f{color:var(--amber);}
+table.life thead th{white-space:normal;text-transform:none;letter-spacing:0;font-size:12px;color:var(--text);transition:background .3s,color .3s;}
+table.life thead th small{display:block;font-weight:400;color:var(--muted);font-size:11px;margin-top:2px;}
+table.life thead th.on{background:var(--amber-bg);color:var(--amber);}
+table.life td.c{font-size:12px;padding:8px 10px;opacity:0;transform:translateY(4px);transition:opacity .45s ease,transform .45s ease,background .3s;border-left:1px solid var(--border-soft);}
+table.life td.c.show{opacity:1;transform:none;}
+table.life td.c.empty{color:var(--muted);}
+table.life td.c .tg{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;padding:1px 7px;border-radius:999px;margin-bottom:3px;}
+.t-fetch .tg,.lg.t-fetch{background:var(--teal-bg);color:var(--teal-text);}
+.t-over .tg,.lg.t-over{background:var(--amber-bg);color:var(--amber);}
+.t-pick .tg,.lg.t-pick{background:rgba(139,124,240,.18);color:var(--violet);}
+.t-chg .tg,.lg.t-chg{background:var(--red-bg);color:var(--red-text);}
+.t-calc .tg,.lg.t-calc{background:var(--blue-bg);color:var(--blue-text);}
+table.life td.c.hot{background:rgba(232,163,61,.09);}
+.life-defs{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;align-items:baseline;margin:0 0 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:13px;}
+.life-defs dt,.life-defs dd{margin:0;}
+.life-defs .lg{display:inline-block;}
+@media(max-width:640px){.life-defs{grid-template-columns:1fr;}}
+.life-legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px;font-size:12px;}
+.life-legend .lg{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;padding:2px 9px;border-radius:999px;}
+#life-trail{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:13.5px;margin:0 0 14px;min-height:64px;}
+#life-trail b{color:var(--amber);}
+@media(prefers-reduced-motion:reduce){table.life td.c{transition:none;}}
+footer{margin-top:64px;color:var(--muted);font-family:var(--mono);font-size:12px;display:flex;gap:18px;flex-wrap:wrap;}
+footer a{color:var(--muted);}
+footer a:hover{color:var(--amber);}
+</style>
+</head>
+<body>
+<body>
+<main>
+  <div class="eyebrow"><span class="dot"></span><a href="../../../index.html">bc-shawn-space</a><span class="sep">/</span><a href="../../index.html">Pricing Learning</a><span class="sep">/</span><a href="../index.html">Understand Pricing Service</a><span class="sep">/</span>ListEstimatedTaxProductPrices</div>
+  <h1>ListEstimatedTaxProductPrices <span class="badge wip">WIP</span></h1>
+  <p class="lede">How <code>TaxPricingPrototype.ListEstimatedTaxProductPrices</code> builds a price, field by field and step by step: the process, the branches, and which step fetches, changes or overrides which price.</p>
+  <div class="callout blue"><strong>Scope:</strong> this RPC only. Read from the code in <code>pricing/src/main/scala/com/bigcommerce/catalog/pricing</code> (<code>TaxPricingImpl</code>, <code>PricingService</code>, <code>OverviewPricingService</code>, <code>PriceResolutionService</code>). Not run against a store. Catalog's own <code>calculated_price</code> logic is in the catalog service, which I did not read. For the wider picture (which questions the service answers, what decides a price, how the price types relate) see <a href="../index.html">Understand Pricing Service</a>.</div>
+
+  <nav class="toc"><div class="title">On this page</div><ol>
+    <li><a href="#lifecycle">Fields through the pipeline</a></li>
+    <li><a href="#pipeline">The pipeline</a></li>
+    <li><a href="#mode">Which pricing mode applies</a></li>
+    <li><a href="#override">What overrides what</a></li>
+    <li><a href="#branches">The five calculation branches</a></li>
+    <li><a href="#adjust">What changes <code>calculated_price</code></a></li>
+    <li><a href="#final">To the final response</a></li>
+    <li><a href="#owners">Who owns which field</a></li>
+  </ol></nav>
+
+  <h2 id="lifecycle">1. Fields through the pipeline</h2>
+  <p><strong>This is the overview.</strong> It puts the whole process on one grid. The columns are the five steps of <a href="#pipeline">the pipeline</a>. The cells link to the detail: <a href="#mode">pricing mode</a> and <a href="#override">overrides</a> (step 2), the <a href="#branches">branches</a> (step 3), <a href="#adjust">adjustments</a> (step 4), and the <a href="#final">final response</a> (step 5). <a href="#owners">Who owns which field</a> at the end is the same information as a plain table.</p>
+  <p>Each row is a response field. Each column is a pipeline step. A cell says what happens to the field there: fetched, overridden, picked, changed, or computed. <strong>Play</strong> walks the steps in order. Click a field name to read its full trail. The pricing mode changes which cells are active.</p>
+  <div class="life-ctl">
+    <span class="lbl">Pricing mode</span>
+    <div class="seg" id="life-mode">
+      <button data-m="none" aria-pressed="true">None</button>
+      <button data-m="pl" aria-pressed="false">PriceList</button>
+      <button data-m="disc" aria-pressed="false">Discounts</button>
+    </div>
+    <button class="play" id="life-play">&#9654; Play</button>
+  </div>
+  <dl class="life-defs">
+    <dt><span class="lg t-fetch">fetched</span></dt><dd>Read from catalog and multiplied by the exchange rate (percentages are left as they are).</dd>
+    <dt><span class="lg t-over">overridden</span></dt><dd>A price list record replaces the value that was fetched.</dd>
+    <dt><span class="lg t-pick">picked</span></dt><dd>The branch chooses which candidate price becomes the response value: the base product's, the selected variant's, or the cheapest variant's. The amount is copied as is, not changed.</dd>
+    <dt><span class="lg t-chg">changed</span></dt><dd>The amount is modified: rules, picklists, or a customer group discount.</dd>
+    <dt><span class="lg t-calc">computed</span></dt><dd>Worked out from other prices: a min and max range, rounding, tax amounts, or <code>saved</code>.</dd>
+  </dl>
+  <div class="card-table"><table class="life" id="life-table"></table></div>
+  <div id="life-trail">Click a field name to see its trail.</div>
+  <p class="small muted">Rounding to the currency's decimal places happens in step 5, before tax. Percentage rules and percentage bulk tiers are not multiplied by the exchange rate in step 1. Discounts are applied while the range is built, which this grid shows in step 4. In the code that happens inside the branch method.</p>
+
+  <h2 id="pipeline">2. The pipeline</h2>
+  <p class="flow-caption">One request. Loops every 8s.</p>
+  <div class="flow">
+    <div class="node"><span class="tag">Step 0</span><b>Context</b><small>store, group, channel, currency, exchange rate</small></div>
+    <div class="node grpc"><span class="tag">Step 1</span><b>Catalog fetch</b><small><code>ListCatalogPrices</code>, then &times; exchange rate</small></div>
+    <div class="node"><span class="tag">Step 2</span><b>Pricing mode</b><small>PriceList, Discounts or None</small></div>
+    <div class="node"><span class="tag">Step 3</span><b>Resolve base prices</b><small>price list records override catalog</small></div>
+    <div class="node"><span class="tag">Step 4</span><b>Branch + adjust</b><small>pick prices, then change <code>calculated_price</code></small></div>
+    <div class="node http"><span class="tag">Step 5</span><b>Round, tax, saved</b><small>in-process Tax</small></div>
+    <div class="node"><span class="tag">Done</span><b>Response</b><small>request order</small></div>
+  </div>
+  <ul>
+    <li><strong>Context.</strong> If the request has no exchange rate, it is looked up from the currency projection, together with the decimal places.</li>
+    <li><strong>Catalog fetch.</strong> One call returns, per item, the base product price, every variant's price, the selected variant, option set and product rules, picklists and bulk tiers. Every money value is multiplied by the exchange rate (percentage rules are not). A flag caches catalog data by product ID, only for items with no variant and no options.</li>
+    <li><strong>Steps 2 to 5</strong> are covered in the sections below. Section 1 shows every field across these steps.</li>
+  </ul>
+
+  <h2 id="mode">3. Which pricing mode applies</h2>
+  <p>Decided from the customer group and channel, by <code>PricingPriceListAssignmentService</code>. The first match wins.</p>
+  <div class="card-table"><table>
+    <thead><tr><th>#</th><th>Condition</th><th>Mode</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>A price list is assigned to the customer group, or to the group and channel (price lists feature on)</td><td><strong>PriceList</strong></td></tr>
+      <tr><td>2</td><td>A channel-wide price list (customer group 0), and the group has no discounts (both features on)</td><td><strong>PriceList</strong></td></tr>
+      <tr><td>3</td><td>The group has customer group discounts (feature on)</td><td><strong>Discounts</strong></td></tr>
+      <tr><td>4</td><td>Anything else</td><td><strong>None</strong>, plain catalog prices</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">So a price list and customer group discounts never apply together. A channel-wide price list loses to the group's discounts. The result is cached per store, group and channel.</p>
+
+  <h2 id="override">4. What overrides what</h2>
+  <div class="card-table"><table>
+    <thead><tr><th>Source</th><th>Replaces</th><th>Leaves alone</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Price list record</strong> (PriceList mode)</td><td>For each variant that has a record: <code>price</code>, <code>calculated</code>, <code>sale</code>, <code>retail</code>, <code>MAP</code>, and the bulk tiers of the selected variant</td><td>The base product price. A variant with no record keeps its catalog prices, except on an inc/ex-tax price list, where it gets null or zero prices.</td></tr>
+      <tr><td><strong>Option set and product rules</strong></td><td><code>calculated_price</code> only</td><td>Everything else</td></tr>
+      <tr><td><strong>Customer group discount</strong> (Discounts mode)</td><td><code>calculated_price</code>, and the price range min and max</td><td><code>price</code>, <code>sale</code>, <code>retail</code></td></tr>
+      <tr><td><strong>Picklist prices</strong></td><td>Added onto <code>calculated_price</code></td><td>Everything else</td></tr>
+      <tr><td><strong>Tax</strong></td><td>Nothing. It adds the inc and ex amounts next to the as-entered amount.</td><td>The as-entered amounts</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="branches">5. The five calculation branches</h2>
+  <p>After the base prices are resolved, each item takes exactly one branch. The branch depends on what catalog returned and on store settings. It decides where every response field comes from. Pick one:</p>
+  <div class="switcher">
+    <div class="label">Branch</div>
+    <div class="seg" id="br-seg">
+      <button data-b="none" aria-pressed="true">noPurchasableVariant</button>
+      <button data-b="single" aria-pressed="false">singleSelectedVariantPrice</button>
+      <button data-b="range" aria-pressed="false">singleSelectedVariantPriceAndRange</button>
+      <button data-b="partial" aria-pressed="false">partial selection</button>
+      <button data-b="default" aria-pressed="false">no selection</button>
+    </div>
+    <div class="out" id="br-out"></div>
+  </div>
+  <div class="card-table"><table>
+    <thead><tr><th>Branch</th><th>Method</th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td><strong>noPurchasableVariant</strong></td><td><code>noPurchasableVariant</code></td><td>Catalog returned no selected variant and no variants. Also what a missing item looks like.</td></tr>
+      <tr><td><strong>singleSelectedVariantPrice</strong></td><td><code>singleSelectedVariantPrice</code></td><td>A selected variant, no variant list. This is a request with a product ID and a variant ID.</td></tr>
+      <tr><td><strong>singleSelectedVariantPriceAndRange</strong></td><td><code>singleSelectedVariantPriceAndRange</code></td><td>The options fully resolve to one variant, and other variants exist.</td></tr>
+      <tr><td><strong>partial selection</strong></td><td><code>toOverviewPriceWithRangesForPartialSelections</code></td><td>The options do not resolve to a variant, and the store prices that from the base product (<code>partialSelectionLowestVariantPrice</code> off with options, or <code>productOverviewUseLowestVariantPrice</code> off with pre-selected options). Skipped on an inc/ex price list.</td></tr>
+      <tr><td><strong>no selection</strong></td><td><code>toOverviewPriceWithRanges</code></td><td>Everything else. This is the usual product listing case.</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><strong>Base product in the range.</strong> The base price joins the min and max candidates only when the product has no required options and <code>productOverviewUseLowestVariantPrice</code> is off.</li>
+    <li><strong>Ties.</strong> The cheapest variant is sorted on <code>calculated_price</code> at currency precision, then on retail price, to match bcapp.</li>
+    <li><strong>Null prices.</strong> When a calculated price is null (or becomes null after adjusting), the item gets an empty price, not zero. Zero prices come from a missing selected variant.</li>
+    <li><strong><code>retail_price_range</code></strong> is built from the variants whose retail price is above their calculated price. It is empty when the min and max are equal.</li>
+    <li><strong>Bulk tiers.</strong> The selected variant's price record tiers if there is one, otherwise catalog's. They are dropped if any variant came from a price list. They are returned as data and never change <code>calculated_price</code>.</li>
+  </ul>
+
+  <h2 id="adjust">6. What changes <code>calculated_price</code></h2>
+  <p><code>adjustPrice</code> runs these in order, on the price the branch picked:</p>
+  <ol>
+    <li><strong>Option set rules</strong>: percentage, relative or fixed.</li>
+    <li><strong>Product rules</strong>: percentage, relative or fixed.</li>
+    <li><strong>Customer group discount</strong>, Discounts mode only. Product discount wins. Without one, the lowest category discount (if it beats the price). Without one, the sitewide discount. Methods: percent off, price off (&times; exchange rate), fixed price, and the two markup methods (flag-gated).</li>
+    <li><strong>Picklist prices</strong> are added. If any picklist price is null, the result is null.</li>
+    <li><strong>Floor at 0.</strong></li>
+  </ol>
+  <div class="callout amber"><strong>Easy to miss:</strong> the price range min and max get customer group discounts, but not option rules or picklists. A code comment says this matches bcapp. So the range can disagree with <code>calculated_price</code> when rules apply.</div>
+
+  <h2 id="final">7. To the final response</h2>
+  <ol>
+    <li><strong>Round</strong> every price to the currency's decimal places, before tax.</li>
+    <li><strong>Resolve "entered as"</strong> per item: the price list's inc or ex flag, or the global tax catalog setting.</li>
+    <li><strong>Tax.</strong> The in-process Tax RPC prices <code>calculated</code>, <code>price</code>, <code>sale</code>, <code>retail</code>, <code>MAP</code>, both range ends, and monetary bulk tiers. Each becomes <code>{ as_entered, inc_tax, ex_tax }</code>. If the tax call fails, it is logged and each price falls back to inc = ex = the as-entered amount.</li>
+    <li><strong><code>saved</code></strong> is computed last, only when retail is greater than calculated: <code>retail &minus; calculated</code>, for all three amounts.</li>
+    <li><strong>Order.</strong> The response is put back in request order and bulk tiers are sorted by minimum quantity. An item with no result comes back with a null <code>calculated_price</code>.</li>
+  </ol>
+  <p class="small muted">The response is <code>ListEstimatedTaxPricesRespProto(prices, calculation logs)</code>. The logs are filled only when the request sets <code>include_calculation_data</code>.</p>
+
+  <h2 id="owners">8. Who owns which field</h2>
+  <div class="card-table"><table>
+    <thead><tr><th>Response field</th><th>Starts from</th><th>Changed by</th></tr></thead>
+    <tbody>
+      <tr><td><code>price</code>, <code>sale_price</code>, <code>retail_price</code>, <code>minimum_advertised_price</code></td><td>Catalog</td><td>A price list record (per variant). Never by rules or discounts.</td></tr>
+      <tr><td><code>calculated_price</code></td><td>Catalog, or the price list record</td><td>Option set rules, product rules, discount, picklists</td></tr>
+      <tr><td><code>price_range</code></td><td>Variant <code>calculated_price</code> min and max</td><td>Discounts only</td></tr>
+      <tr><td><code>retail_price_range</code></td><td>Variant retail prices</td><td>Nothing</td></tr>
+      <tr><td><code>bulk_tiers</code></td><td>Catalog, or the price list record</td><td>Nothing</td></tr>
+      <tr><td>Inc and ex amounts of each price above</td><td>That price's own as-entered amount, taxed with the item's tax class</td><td>Tax RPC. One line per price: <code>calculated</code>, <code>price</code>, <code>sale</code>, <code>retail</code>, <code>MAP</code>, both range ends, each monetary bulk tier.</td></tr>
+      <tr><td><code>saved</code></td><td><code>retail_price &minus; calculated_price</code>, subtracted separately for the as-entered, inc and ex amounts</td><td>Only present when retail (as entered) is greater than calculated. Computed after tax.</td></tr>
+    </tbody>
+  </table></div>
+
+  <footer><a href="../index.html">&larr; back to Understand Pricing Service</a><a href="../../index.html">Pricing Learning</a></footer>
+</main>
+<script>
+(function(){
+  var STEPS=[["Catalog fetch","&times; exchange rate"],["Resolve base","price list records"],["Branch","which source is used"],["Adjust","rules, discount, picklists"],["Round, tax, saved","in-process Tax"]];
+  var F=function(t,x){return {t:t,x:x}};
+  var catalogMoney=F("fetch","Catalog value, &times; rate");
+  var plOver=function(w){return {t:"over",x:w,m:"pl"}};
+  var rows=[
+    {n:"price",trail:"<b>price</b>: fetched from catalog (&times; rate) for the base product and every variant. A price list record replaces a variant's value in step 2. The branch picks one source: base, selected variant, or the cheapest variant. Rules and discounts never touch it. Step 5 rounds it and adds inc and ex amounts.",c:[catalogMoney,plOver("Variant's record price"),F("pick","Base, selected or cheapest variant"),null,F("calc","Round, then inc / ex")]},
+    {n:"sale_price",trail:"<b>sale_price</b>: same path as price. Fetched, replaced by a price list record per variant, picked by the branch, never adjusted.",c:[catalogMoney,plOver("Variant's record sale price"),F("pick","Same source as price"),null,F("calc","Round, then inc / ex")]},
+    {n:"retail_price",trail:"<b>retail_price</b>: same path as price, and it feeds <b>saved</b> in step 5.",c:[catalogMoney,plOver("Variant's record retail price"),F("pick","Same source as price"),null,F("calc","Round, then inc / ex")]},
+    {n:"minimum_advertised_price",trail:"<b>minimum_advertised_price</b>: same path as price.",c:[catalogMoney,plOver("Variant's record MAP"),F("pick","Same source as price"),null,F("calc","Round, then inc / ex")]},
+    {n:"calculated_price",trail:"<b>calculated_price</b>: fetched from catalog (&times; rate), replaced by a price list record per variant, picked by the branch, then the only price that changes in step 4: option set rules, product rules, picklists, and in Discounts mode only, the customer group discount. Floor at 0. Rounded and taxed in step 5.",c:[catalogMoney,plOver("Variant's record calculated price"),F("pick","Base, selected or cheapest variant"),{t:"chg",x:"Option set rules, product rules, then picklists",xm:{disc:"Option set rules, product rules, <b>customer group discount</b>, then picklists"}},F("calc","Round, then inc / ex")]},
+    {n:"price_range",trail:"<b>price_range</b>: built in the branch step from the variants' calculated prices (min and max, plus base when allowed). Customer group discounts are applied to both ends in Discounts mode. Option set rules and picklists are not. Both ends get inc and ex amounts in step 5.",c:[null,null,F("calc","Min and max of variants' calculated prices"),{t:"chg",x:"Discounts only, both ends",m:"disc"},F("calc","Round, then inc / ex")]},
+    {n:"retail_price_range",trail:"<b>retail_price_range</b>: built in the branch step from variants whose retail price is above their calculated price. Empty when min equals max. Not adjusted.",c:[null,null,F("calc","Min and max of variants' retail prices"),null,F("calc","Round, then inc / ex")]},
+    {n:"bulk_tiers",trail:"<b>bulk_tiers</b>: fetched from catalog (fixed amounts &times; rate, percent tiers as is). A price list record replaces the selected variant's tiers in step 2. If any variant came from a price list and the selected one has no record, tiers are dropped. Never change calculated_price. Monetary tiers get inc and ex amounts in step 5.",c:[F("fetch","Catalog tiers"),plOver("Selected variant's record tiers"),F("pick","Selected variant's, else catalog's, else none"),null,F("calc","Inc / ex on monetary tiers")]},
+    {n:"saved",trail:"<b>saved</b>: computed last, only when retail (as entered) is greater than calculated. <code>retail &minus; calculated</code>, for the as-entered, inc and ex amounts.",c:[null,null,null,null,F("calc","retail &minus; calculated")]},
+    {n:"inc / ex amounts",trail:"<b>inc / ex amounts</b>: the Tax RPC prices each price line above on its own, using the item's tax class. If the tax call fails, inc = ex = as entered.",c:[null,null,null,null,F("calc","Per price line, from its as-entered amount")]}
+  ];
+  var tbl=document.getElementById("life-table"),trail=document.getElementById("life-trail");
+  var mode="none",timer=null,sel=-1;
+  var NAMES={fetch:"fetched",over:"overridden",pick:"picked",chg:"changed",calc:"computed"};
+  function active(c){return c && (!c.m || c.m===mode)}
+  function build(){
+    var h='<thead><tr><th class="f">Field</th>'+STEPS.map(function(s,i){return '<th data-s="'+i+'">'+(i+1)+'. '+s[0]+'<small>'+s[1]+'</small></th>'}).join("")+'</tr></thead><tbody>';
+    rows.forEach(function(r,ri){
+      h+='<tr data-r="'+ri+'"><td class="f">'+r.n+'</td>';
+      r.c.forEach(function(c,i){
+        if(active(c)) h+='<td class="c t-'+c.t+'" data-s="'+i+'"><span class="tg">'+NAMES[c.t]+'</span><br>'+((c.xm&&c.xm[mode])||c.x)+'</td>';
+        else if(c) h+='<td class="c empty" data-s="'+i+'">not in this mode</td>';
+        else h+='<td class="c empty" data-s="'+i+'">&mdash;</td>';
+      });
+      h+='</tr>';
+    });
+    tbl.innerHTML=h+'</tbody>';
+  }
+  function showUpTo(k){
+    Array.prototype.forEach.call(tbl.querySelectorAll("td.c"),function(td){td.classList.toggle("show",+td.dataset.s<=k);td.classList.toggle("hot",+td.dataset.s===k&&!td.classList.contains("empty"));});
+    Array.prototype.forEach.call(tbl.querySelectorAll("th[data-s]"),function(th){th.classList.toggle("on",+th.dataset.s===k);});
+  }
+  function stop(){if(timer){clearInterval(timer);timer=null;}document.getElementById("life-play").innerHTML="&#9654; Play";}
+  function play(){
+    stop();var k=-1;showUpTo(-1);
+    document.getElementById("life-play").innerHTML="&#10073;&#10073; Pause";
+    timer=setInterval(function(){k++;if(k>=STEPS.length){stop();showUpTo(STEPS.length-1);tbl.querySelectorAll("th.on").forEach(function(t){t.classList.remove("on")});return;}showUpTo(k);},1300);
+  }
+  function render(){build();showUpTo(STEPS.length-1);tbl.querySelectorAll("th.on").forEach(function(t){t.classList.remove("on")});if(sel>=0)mark();}
+  function mark(){Array.prototype.forEach.call(tbl.querySelectorAll("tbody tr"),function(tr){tr.classList.toggle("sel",+tr.dataset.r===sel);});}
+  document.getElementById("life-mode").addEventListener("click",function(e){
+    var b=e.target.closest("button");if(!b)return;mode=b.dataset.m;stop();
+    Array.prototype.forEach.call(this.children,function(x){x.setAttribute("aria-pressed",x===b?"true":"false");});render();
+  });
+  document.getElementById("life-play").addEventListener("click",function(){if(timer)stop();else play();});
+  tbl.addEventListener("click",function(e){
+    var td=e.target.closest("td.f");if(!td)return;sel=+td.parentNode.dataset.r;mark();trail.innerHTML=rows[sel].trail;
+  });
+  render();
+  if("IntersectionObserver" in window&&!matchMedia("(prefers-reduced-motion: reduce)").matches){
+    var seen=false;new IntersectionObserver(function(es){if(!seen&&es[0].isIntersecting){seen=true;play();}},{threshold:.5}).observe(tbl);
+  }
+})();
+</script>
+<script>
+(function(){
+  var D={
+    none:{calc:["Base product <code>calculated_price</code>, adjusted","yes"],price:["Base product","yes"],sale:["Base product <code>sale</code>, <code>retail</code>, <code>MAP</code>","yes"],range:["<code>[calc, calc]</code>","yes"],note:"Price list records are not used here: they only replace variant prices, and this item has none."},
+    single:{calc:["Selected variant <code>calculated_price</code>, adjusted","yes"],price:["Selected variant (price list record if any)","yes"],sale:["Selected variant <code>sale</code>, <code>retail</code>, <code>MAP</code>","yes"],range:["<code>[calc, calc]</code>","yes"],note:"No variant list, so the range cannot be wider than the one price."},
+    range:{calc:["Selected variant <code>calculated_price</code>, adjusted","yes"],price:["Selected variant (price list record if any)","yes"],sale:["Selected variant <code>sale</code>, <code>retail</code>, <code>MAP</code>","yes"],range:["Min to max of all variants, discounts only","yes"],note:"Same as the previous branch, plus a range across the variants. A null selected variant gives an empty price."},
+    partial:{calc:["Base product <code>calculated_price</code>, with option set rules, product rules and picklists","yes"],price:["Base product","yes"],sale:["Base product <code>sale</code>, <code>retail</code>, <code>MAP</code>","yes"],range:["No options: min to max of variants (and base). Options present: <code>[calc, calc]</code>","yes"],note:"The only branch that reads the base product price while variants exist. One flag also lifts a single-point range to the calculated price."},
+    default:{calc:["The cheapest variant's <code>calculated_price</code>, adjusted with <b>no</b> rules or picklists","yes"],price:["The cheapest variant","yes"],sale:["The cheapest variant <code>sale</code>, <code>retail</code>, <code>MAP</code>","yes"],range:["Min to max of variants, plus base when it has no required options","yes"],note:"Used for listings, where no options are chosen. No rules apply because the selection is incomplete."}
+  };
+  var out=document.getElementById("br-out"),seg=document.getElementById("br-seg");
+  function show(k){
+    var d=D[k];
+    out.innerHTML=[["calculated_price",d.calc],["price",d.price],["sale / retail / MAP",d.sale],["price_range",d.range]].map(function(x){
+      return '<div class="cell '+x[1][1]+'"><span class="k">'+x[0]+'</span>'+x[1][0]+'</div>';
+    }).join("")+'<div class="note">'+d.note+'</div>';
+    Array.prototype.forEach.call(seg.children,function(b){b.setAttribute("aria-pressed",b.dataset.b===k?"true":"false");});
+  }
+  seg.addEventListener("click",function(e){var b=e.target.closest("button");if(b)show(b.dataset.b);});
+  show("none");
+})();
+</script>
+</body>
+</html>
