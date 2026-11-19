@@ -225,25 +225,42 @@ footer a:hover{color:var(--amber);}
   <p class="small muted">In short: the first three rows are read paths that answer "what price", the last two are the data behind them. I did not check which clients call <code>GetCartPricing</code>, or whether it is live. The Client Side page covers the clients I did trace.</p>
 
   <h2 id="factors">B. What decides a product's price?</h2>
-  <p>Every factor below can change the price the service returns. They are listed roughly in the order they apply.</p>
+  <p>Only a few factors come from the caller. Everything else is derived: looked up from those inputs, or from the store. The two tables separate them.</p>
+
+  <h3>Direct inputs (what the caller sends)</h3>
+  <p class="small muted">From <code>ListEstimatedTaxPricesReqProto</code>, plus the cart request items.</p>
   <div class="card-table"><table>
-    <thead><tr><th>Factor</th><th>How it affects the price</th></tr></thead>
+    <thead><tr><th>Factor</th><th>Request field</th><th>How it affects the price</th></tr></thead>
     <tbody>
-      <tr><td><strong>Catalog prices</strong></td><td>The starting point. Base price, sale price, retail price, MAP, and per-variant values. The "calculated price" (what the shopper pays before the other factors) comes from catalog.</td></tr>
-      <tr><td><strong>Channel</strong></td><td>Catalog is asked for prices in this channel. A price list can be assigned to a channel.</td></tr>
-      <tr><td><strong>Customer group</strong></td><td>Selects the price list assignment and the customer group discounts. Group 0 means everyone.</td></tr>
-      <tr><td><strong>Price list</strong></td><td>If one is assigned, its records replace each variant's catalog prices. A group's own price list beats a channel-wide one. Lists can be layered, with a fallback mode (priority or lowest price) when several lists have a record.</td></tr>
-      <tr><td><strong>Customer group discounts</strong></td><td>Lower (or with markup on, raise) the calculated price, by percent, amount, or fixed price. Product beats category beats sitewide. Only apply when no price list applies.</td></tr>
-      <tr><td><strong>Selected variant and options</strong></td><td>Decides which variant's price is used. When options are not fully chosen, the result is a price range or the base product price, depending on store settings.</td></tr>
-      <tr><td><strong>Option set rules and product rules</strong></td><td>Adjust the calculated price by percent, relative amount, or fixed price.</td></tr>
-      <tr><td><strong>Picklists</strong></td><td>The price of each chosen picklist product is added on top.</td></tr>
-      <tr><td><strong>Bulk tiers</strong> <span class="muted small">(quantity)</span></td><td>A tier lowers the unit price once the quantity reaches its minimum. The product estimate returns tiers as data. The cart applies the matching one.</td></tr>
-      <tr><td><strong>Currency</strong></td><td>Catalog values are multiplied by the exchange rate. Price list records are stored per currency and looked up by it. Results are rounded to the currency's decimals.</td></tr>
-      <tr><td><strong>Tax</strong></td><td>Does not change the entered price. Adds the inc and ex amounts, using the tax class, the shopper's tax zone, and whether prices are entered inc or ex (price list setting or the store's global one).</td></tr>
-      <tr><td><strong>Store settings and flags</strong></td><td>Decide which logic runs: price lists on or off, discounts on or off, "use lowest variant price" for listings, partial selection pricing, apply bulk tiers after discounts (cart), inc/ex price lists, markup, cascading price lists, and catalog caching.</td></tr>
+      <tr><td><strong>Store</strong></td><td><code>store_id</code></td><td>Scopes everything: catalog data, price lists, discounts, settings and flags are all per store.</td></tr>
+      <tr><td><strong>Product, variant and options</strong></td><td><code>requested_items</code>: <code>product_id</code>, <code>variant_id</code>, <code>option_values</code></td><td>Which product and which variant. Options that do not fully resolve to a variant give a price range or the base price instead of one variant's price.</td></tr>
+      <tr><td><strong>Customer group</strong></td><td><code>customer_group_id</code></td><td>Decides which price list or discounts apply. Group 0 means everyone.</td></tr>
+      <tr><td><strong>Channel</strong></td><td><code>channel_id</code></td><td>Which channel's catalog prices to read, and which channel-level price list applies.</td></tr>
+      <tr><td><strong>Currency</strong></td><td><code>currency_code</code>, optionally <code>exchange_rate</code> and <code>currency_decimal_precision</code></td><td>The currency to price in. Catalog values are multiplied by the exchange rate, price list records are looked up in this currency, and results are rounded to the decimals.</td></tr>
+      <tr><td><strong>Shopper location and identity</strong> <span class="muted small">(tax only)</span></td><td><code>country_code</code>, <code>customer_id</code></td><td>Picks the tax zone, so they change the inc and ex amounts, never the entered price.</td></tr>
+      <tr><td><strong>Quantity and the whole cart</strong> <span class="muted small">(cart only)</span></td><td>cart items: <code>quantity</code>, <code>cart_item_id</code></td><td>Decides which bulk tier applies. The tier is chosen from the quantities across the cart.</td></tr>
+      <tr><td><strong>Null-price behaviour</strong></td><td><code>enable_null_prices_in_response</code></td><td>Whether an item with no price comes back as null or as zero (inc/ex price lists).</td></tr>
     </tbody>
   </table></div>
-  <p class="small muted"><code>resetPriceToBaseCatalogPrice</code> is read from store settings, but in the code I read it is only logged, so I left it out.</p>
+  <p class="small muted"><code>tax_display_as</code> is in the request proto, but no service code reads it. <code>include_calculation_data</code> only adds debug output.</p>
+
+  <h3>Derived factors (looked up, not sent)</h3>
+  <div class="card-table"><table>
+    <thead><tr><th>Factor</th><th>Derived from</th><th>How it affects the price</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Store settings and flags</strong></td><td>Store ID</td><td>Decide which logic runs: price lists on or off, discounts on or off, "use lowest variant price" for listings, partial selection pricing, apply bulk tiers after discounts (cart), inc/ex price lists, markup, cascading price lists, catalog caching.</td></tr>
+      <tr><td><strong>Catalog prices</strong></td><td>Store, channel, product, variant and options</td><td>The starting point: base, sale, retail and MAP prices and per-variant values. The "calculated price" (what the shopper pays before the other factors) comes from catalog.</td></tr>
+      <tr><td><strong>Selected variant</strong></td><td>Product and options</td><td>Decides which variant's price is used.</td></tr>
+      <tr><td><strong>Option set rules, product rules and picklists</strong></td><td>The selected options</td><td>Rules adjust the calculated price by percent, relative amount, or fixed price. Each chosen picklist product's price is added on top.</td></tr>
+      <tr><td><strong>Pricing mode</strong></td><td>Customer group, channel, store settings</td><td>One of price list, discounts, or none. They never apply together.</td></tr>
+      <tr><td><strong>Price list</strong></td><td>Customer group and channel (the assignment), then the variant and currency (the record)</td><td>Its records replace each variant's catalog prices. A group's own price list beats a channel-wide one. Lists can be layered, with a fallback mode (priority or lowest price) when several lists have a record.</td></tr>
+      <tr><td><strong>Customer group discounts</strong></td><td>Customer group, product, and the product's categories</td><td>Lower (or with markup on, raise) the calculated price, by percent, amount, or fixed price. Product beats category beats sitewide. Only apply when no price list applies.</td></tr>
+      <tr><td><strong>Bulk tiers</strong></td><td>The selected variant (its price record, else catalog), and the cart quantity</td><td>A tier lowers the unit price once the quantity reaches its minimum. The product estimate returns tiers as data. The cart applies the matching one.</td></tr>
+      <tr><td><strong>Exchange rate and decimals</strong> <span class="muted small">(when not sent)</span></td><td>Store ID and currency, from the currency projection</td><td>Same effect as the currency input above.</td></tr>
+      <tr><td><strong>Tax</strong></td><td>Tax class (from catalog), tax zone (country, customer), and "entered inc or ex" (the price list's setting, else the store's global one)</td><td>Does not change the entered price. Adds the inc and ex amounts.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted"><code>resetPriceToBaseCatalogPrice</code> is read from store settings, but in the code I read it is only logged, so I left it out. The cart request fields come from <code>CartPricingRequestItem</code>, not the proto.</p>
 
   <h2 id="relations">C. How catalog price, price list, discounts and cart price relate</h2>
   <p class="flow-caption">The order that decides a price. Loops every 8s.</p>
