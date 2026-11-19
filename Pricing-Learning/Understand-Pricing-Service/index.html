@@ -180,6 +180,10 @@ table.life td.c .tg{display:inline-block;font-family:var(--mono);font-size:10px;
 .t-chg .tg,.lg.t-chg{background:var(--red-bg);color:var(--red-text);}
 .t-calc .tg,.lg.t-calc{background:var(--blue-bg);color:var(--blue-text);}
 table.life td.c.hot{background:rgba(232,163,61,.09);}
+.life-defs{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;align-items:baseline;margin:0 0 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:13px;}
+.life-defs dt,.life-defs dd{margin:0;}
+.life-defs .lg{display:inline-block;}
+@media(max-width:640px){.life-defs{grid-template-columns:1fr;}}
 .life-legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px;font-size:12px;}
 .life-legend .lg{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;padding:2px 9px;border-radius:999px;}
 #life-trail{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:13.5px;margin:0 0 14px;min-height:64px;}
@@ -198,8 +202,8 @@ footer a:hover{color:var(--amber);}
   <div class="callout blue"><strong>Scope:</strong> this RPC only. Read from the code in <code>pricing/src/main/scala/com/bigcommerce/catalog/pricing</code> (<code>TaxPricingImpl</code>, <code>PricingService</code>, <code>OverviewPricingService</code>, <code>PriceResolutionService</code>). Not run against a store. Catalog's own <code>calculated_price</code> logic is in the catalog service, which I did not read.</div>
 
   <nav class="toc"><div class="title">On this page</div><ol>
-    <li><a href="#pipeline">The pipeline</a></li>
     <li><a href="#lifecycle">Fields through the pipeline</a></li>
+    <li><a href="#pipeline">The pipeline</a></li>
     <li><a href="#mode">Which pricing mode applies</a></li>
     <li><a href="#override">What overrides what</a></li>
     <li><a href="#branches">The five calculation branches</a></li>
@@ -208,7 +212,30 @@ footer a:hover{color:var(--amber);}
     <li><a href="#owners">Who owns which field</a></li>
   </ol></nav>
 
-  <h2 id="pipeline">1. The pipeline</h2>
+  <h2 id="lifecycle">1. Fields through the pipeline</h2>
+  <p><strong>This is the overview.</strong> It puts the whole process on one grid. The columns are the five steps of <a href="#pipeline">the pipeline</a>. The cells link to the detail: <a href="#mode">pricing mode</a> and <a href="#override">overrides</a> (step 2), the <a href="#branches">branches</a> (step 3), <a href="#adjust">adjustments</a> (step 4), and the <a href="#final">final response</a> (step 5). <a href="#owners">Who owns which field</a> at the end is the same information as a plain table.</p>
+  <p>Each row is a response field. Each column is a pipeline step. A cell says what happens to the field there: fetched, overridden, picked, changed, or computed. <strong>Play</strong> walks the steps in order. Click a field name to read its full trail. The pricing mode changes which cells are active.</p>
+  <div class="life-ctl">
+    <span class="lbl">Pricing mode</span>
+    <div class="seg" id="life-mode">
+      <button data-m="none" aria-pressed="true">None</button>
+      <button data-m="pl" aria-pressed="false">PriceList</button>
+      <button data-m="disc" aria-pressed="false">Discounts</button>
+    </div>
+    <button class="play" id="life-play">&#9654; Play</button>
+  </div>
+  <dl class="life-defs">
+    <dt><span class="lg t-fetch">fetched</span></dt><dd>Read from catalog and multiplied by the exchange rate (percentages are left as they are).</dd>
+    <dt><span class="lg t-over">overridden</span></dt><dd>A price list record replaces the value that was fetched.</dd>
+    <dt><span class="lg t-pick">picked</span></dt><dd>The branch chooses which candidate price becomes the response value: the base product's, the selected variant's, or the cheapest variant's. The amount is copied as is, not changed.</dd>
+    <dt><span class="lg t-chg">changed</span></dt><dd>The amount is modified: rules, picklists, or a customer group discount.</dd>
+    <dt><span class="lg t-calc">computed</span></dt><dd>Worked out from other prices: a min and max range, rounding, tax amounts, or <code>saved</code>.</dd>
+  </dl>
+  <div class="card-table"><table class="life" id="life-table"></table></div>
+  <div id="life-trail">Click a field name to see its trail.</div>
+  <p class="small muted">Rounding to the currency's decimal places happens in step 5, before tax. Percentage rules and percentage bulk tiers are not multiplied by the exchange rate in step 1. Discounts are applied while the range is built, which this grid shows in step 4. In the code that happens inside the branch method.</p>
+
+  <h2 id="pipeline">2. The pipeline</h2>
   <p class="flow-caption">One request. Loops every 8s.</p>
   <div class="flow">
     <div class="node"><span class="tag">Step 0</span><b>Context</b><small>store, group, channel, currency, exchange rate</small></div>
@@ -222,26 +249,8 @@ footer a:hover{color:var(--amber);}
   <ul>
     <li><strong>Context.</strong> If the request has no exchange rate, it is looked up from the currency projection, together with the decimal places.</li>
     <li><strong>Catalog fetch.</strong> One call returns, per item, the base product price, every variant's price, the selected variant, option set and product rules, picklists and bulk tiers. Every money value is multiplied by the exchange rate (percentage rules are not). A flag caches catalog data by product ID, only for items with no variant and no options.</li>
-    <li><strong>Steps 2 to 5</strong> are covered in the sections below. The next section shows every field across all five steps.</li>
+    <li><strong>Steps 2 to 5</strong> are covered in the sections below. Section 1 shows every field across these steps.</li>
   </ul>
-
-  <h2 id="lifecycle">2. Fields through the pipeline</h2>
-  <p>Each row is a response field. Each column is a pipeline step. A cell says what happens to the field there: fetched, overridden, picked, changed, or computed. <strong>Play</strong> walks the steps in order. Click a field name to read its full trail. The pricing mode changes which cells are active.</p>
-  <div class="life-ctl">
-    <span class="lbl">Pricing mode</span>
-    <div class="seg" id="life-mode">
-      <button data-m="none" aria-pressed="true">None</button>
-      <button data-m="pl" aria-pressed="false">PriceList</button>
-      <button data-m="disc" aria-pressed="false">Discounts</button>
-    </div>
-    <button class="play" id="life-play">&#9654; Play</button>
-  </div>
-  <div class="life-legend">
-    <span class="lg t-fetch">fetched</span><span class="lg t-over">overridden</span><span class="lg t-pick">picked</span><span class="lg t-chg">changed</span><span class="lg t-calc">computed</span>
-  </div>
-  <div class="card-table"><table class="life" id="life-table"></table></div>
-  <div id="life-trail">Click a field name to see its trail.</div>
-  <p class="small muted">Rounding to the currency's decimal places happens in step 5, before tax. Percentage rules and percentage bulk tiers are not multiplied by the exchange rate in step 1. Discounts are applied while the range is built, which this grid shows in step 4. In the code that happens inside the branch method.</p>
 
   <h2 id="mode">3. Which pricing mode applies</h2>
   <p>Decided from the customer group and channel, by <code>PricingPriceListAssignmentService</code>. The first match wins.</p>
@@ -347,7 +356,7 @@ footer a:hover{color:var(--amber);}
     {n:"sale_price",trail:"<b>sale_price</b>: same path as price. Fetched, replaced by a price list record per variant, picked by the branch, never adjusted.",c:[catalogMoney,plOver("Variant's record sale price"),F("pick","Same source as price"),null,F("calc","Round, then inc / ex")]},
     {n:"retail_price",trail:"<b>retail_price</b>: same path as price, and it feeds <b>saved</b> in step 5.",c:[catalogMoney,plOver("Variant's record retail price"),F("pick","Same source as price"),null,F("calc","Round, then inc / ex")]},
     {n:"minimum_advertised_price",trail:"<b>minimum_advertised_price</b>: same path as price.",c:[catalogMoney,plOver("Variant's record MAP"),F("pick","Same source as price"),null,F("calc","Round, then inc / ex")]},
-    {n:"calculated_price",trail:"<b>calculated_price</b>: fetched from catalog (&times; rate), replaced by a price list record per variant, picked by the branch, then the only price that changes in step 4: option set rules, product rules, customer group discount (Discounts mode), picklists, floor at 0. Rounded and taxed in step 5.",c:[catalogMoney,plOver("Variant's record calculated price"),F("pick","Base, selected or cheapest variant"),F("chg","Rules, then discount, then picklists",{}),F("calc","Round, then inc / ex")]},
+    {n:"calculated_price",trail:"<b>calculated_price</b>: fetched from catalog (&times; rate), replaced by a price list record per variant, picked by the branch, then the only price that changes in step 4: option set rules, product rules, picklists, and in Discounts mode only, the customer group discount. Floor at 0. Rounded and taxed in step 5.",c:[catalogMoney,plOver("Variant's record calculated price"),F("pick","Base, selected or cheapest variant"),{t:"chg",x:"Option set rules, product rules, then picklists",xm:{disc:"Option set rules, product rules, <b>customer group discount</b>, then picklists"}},F("calc","Round, then inc / ex")]},
     {n:"price_range",trail:"<b>price_range</b>: built in the branch step from the variants' calculated prices (min and max, plus base when allowed). Customer group discounts are applied to both ends in Discounts mode. Option set rules and picklists are not. Both ends get inc and ex amounts in step 5.",c:[null,null,F("calc","Min and max of variants' calculated prices"),{t:"chg",x:"Discounts only, both ends",m:"disc"},F("calc","Round, then inc / ex")]},
     {n:"retail_price_range",trail:"<b>retail_price_range</b>: built in the branch step from variants whose retail price is above their calculated price. Empty when min equals max. Not adjusted.",c:[null,null,F("calc","Min and max of variants' retail prices"),null,F("calc","Round, then inc / ex")]},
     {n:"bulk_tiers",trail:"<b>bulk_tiers</b>: fetched from catalog (fixed amounts &times; rate, percent tiers as is). A price list record replaces the selected variant's tiers in step 2. If any variant came from a price list and the selected one has no record, tiers are dropped. Never change calculated_price. Monetary tiers get inc and ex amounts in step 5.",c:[F("fetch","Catalog tiers"),plOver("Selected variant's record tiers"),F("pick","Selected variant's, else catalog's, else none"),null,F("calc","Inc / ex on monetary tiers")]},
@@ -363,7 +372,7 @@ footer a:hover{color:var(--amber);}
     rows.forEach(function(r,ri){
       h+='<tr data-r="'+ri+'"><td class="f">'+r.n+'</td>';
       r.c.forEach(function(c,i){
-        if(active(c)) h+='<td class="c t-'+c.t+'" data-s="'+i+'"><span class="tg">'+NAMES[c.t]+'</span><br>'+c.x+'</td>';
+        if(active(c)) h+='<td class="c t-'+c.t+'" data-s="'+i+'"><span class="tg">'+NAMES[c.t]+'</span><br>'+((c.xm&&c.xm[mode])||c.x)+'</td>';
         else if(c) h+='<td class="c empty" data-s="'+i+'">not in this mode</td>';
         else h+='<td class="c empty" data-s="'+i+'">&mdash;</td>';
       });
