@@ -454,38 +454,75 @@ fragment VariantPricing on Prices {
   <!-- 2. product-attributes                                             -->
   <!-- ================================================================ -->
   <h2 id="product-attributes">2. <code>POST /remote/v1/product-attributes/{productId}</code></h2>
-  <div class="callout blue"><strong>Scope:</strong> only the parts related to price. Stock, backorder and option-rule handling are left out.</div>
-  <p>This is the extra call a PDP makes to refresh state when the shopper picks options. It is separate from the Pricing service path in section 1.</p>
+  <div class="callout blue"><strong>Scope:</strong> only the price. Stock, backorder and option-rule handling are left out.</div>
+  <p>When the shopper picks an option on the PDP, the theme asks bcapp for the new state and redraws the price from the answer. This path does <strong>not</strong> use the <code>ListEstimatedTaxProductPrices</code> RPC from section 1.</p>
 
-  <div class="callout red"><span class="badge unverified">unverified</span> <strong>Who prices this response is not confirmed.</strong> Storefront does not handle this route itself (below), so the price comes from bcapp. bcapp is not in the repos I can read, so I cannot say whether it calls the Pricing service or computes the price on its own.</div>
+  <p class="flow-caption">One option change. Loops every 8s.</p>
+  <div class="flow">
+    <div class="node"><span class="tag">Browser</span><b>Theme</b><small><code>optionChange()</code> on every option change</small></div>
+    <div class="node http"><span class="tag">Storefront</span><b>Proxy</b><small>forwards <code>/remote/*</code> to bcapp</small></div>
+    <div class="node"><span class="tag">bcapp</span><b>ProductAttributes.php</b><small><code>getVariation</code></small></div>
+    <div class="node"><span class="tag">Cache</span><b>Redis, 20 s</b><small>whole response, flag-gated</small></div>
+    <div class="node grpc"><span class="tag">bcapp + Pricing service</span><b>Price</b><small>records from the service, math in PHP</small></div>
+    <div class="node http"><span class="tag">Response</span><b>{ data, content }</b><small><code>data.price</code></small></div>
+    <div class="node"><span class="tag">Browser</span><b>updateView</b><small>redraws the price rows</small></div>
+  </div>
 
-  <h3>Who serves it</h3>
-  <p>Storefront has no handler for <code>product-attributes</code>. The request falls into the catch-all <code>pathPrefix("remote" / Segment)</code>, which goes to <code>handleRenderableRemoteApiRequest</code> and is proxied to bcapp. Source: storefront: <code>routers/RemoteApiRouter.scala</code> line 133. When the theme asks for a render template, storefront wraps the HTML as <code>{"content": "...", "data": {...}}</code>.</p>
+  <h3>What triggers it</h3>
+  <ul>
+    <li><strong>Every option <code>change</code></strong> sends the serialized product form as a <code>POST</code>, with the template <code>products/bulk-discount-rates</code> in the <code>stencil-options</code> header. The response repaints the page (<code>product-details.js:301</code>).</li>
+    <li><strong>Once on page load</strong>, with the initial selection. That callback updates stock and option state, and I found no price update in it (<code>product-details.js:88</code>).</li>
+    <li><strong>Editing options in the cart</strong> uses it too (<code>cart.js:177</code>). Not investigated.</li>
+  </ul>
+  <p class="small muted">The first paint does not call this endpoint. It reads <code>window.BCData.product_attributes</code>, whose <code>price</code> is the same GraphQL price as <code>product.price</code> (section 4), and applies it with the same <code>updateView</code>. Storefront has no handler for the route: it falls into <code>pathPrefix("remote" / Segment)</code> in <code>RemoteApiRouter.scala:133</code>, is proxied to bcapp, and a requested template is rendered by storefront and returned as <code>{"content": "...", "data": {...}}</code>.</p>
 
-  <h3>When the theme calls it</h3>
+  <h3>How bcapp builds the price</h3>
   <div class="card-table"><table>
-    <thead><tr><th>Trigger</th><th>Call</th><th>What the callback does</th></tr></thead>
+    <thead><tr><th>Step</th><th>Done by</th></tr></thead>
     <tbody>
-      <tr><td>Page load</td><td><code>optionChange(productId, initialSelection, cb)</code><br><span class="muted small">cornerstone: <code>assets/js/theme/common/product-details.js:88</code></span></td><td>Updates stock, backorder, option availability and messages. I read the callback and did not find a price update in it.</td></tr>
-      <tr><td>Shopper changes an option</td><td><code>optionChange(productId, $form.serialize(), 'products/bulk-discount-rates', cb)</code><br><span class="muted small"><code>product-details.js:301</code></span></td><td>Calls <code>updateView(response.data, response.content)</code>. This is where the displayed price is refreshed.</td></tr>
-      <tr><td>Edit options on the cart page</td><td><code>optionChange(productId, $form.serialize(), cb)</code><br><span class="muted small"><code>cart.js:177</code></span></td><td>Not investigated</td></tr>
+      <tr><td>Cache lookup (below)</td><td>bcapp, Redis</td></tr>
+      <tr><td>Which price list applies to the customer group and channel</td><td><strong>Pricing service</strong>, gRPC <code>FindPriceListAssignment</code></td></tr>
+      <tr><td>That price list's prices</td><td><strong>Pricing service</strong>, Price Lists RPC <code>GetPriceRecordCollection</code></td></tr>
+      <tr><td>No price list for this shopper: catalog prices</td><td>bcapp, <code>CatalogPricingService</code></td></tr>
+      <tr><td>Final price, bulk tiers, option-rule adjustments, rounding</td><td>bcapp, PHP</td></tr>
+      <tr><td>Tax inclusive and exclusive amounts</td><td>bcapp, PHP (<code>PricingBasicTaxService</code>)</td></tr>
     </tbody>
   </table></div>
-  <p class="small muted">The request body is the serialized product form. I did not capture a request, so I do not list its fields. I did not read how <code>updateView</code> reads the price from the response.</p>
+  <p class="small muted">So the Pricing service answers "which list, and what is in it", and bcapp decides what to do with that and does the math. bcapp's only client of <code>ListEstimatedTaxProductPrices</code> is an admin debugging controller (<code>NinjaPricingController</code>). Source, repo <code>bigcommerce</code>: <code>includes/resources/remote/v1/ProductAttributes.php</code>, <code>app/Pricing/Storefront/StorefrontPricingService.php</code>, <code>app/Pricing/PricingService.php</code>, <code>app/Pricing/SelectionPricingService.php</code>.</p>
 
-  <h3>How it relates to the first paint</h3>
-  <p>The first paint does not use this call. It uses <code>window.BCData.product_attributes</code>, applied by <code>updateView(productAttributesData, null)</code> in the same file at line 131. That object is built by storefront when every PDP experiment is enabled, and emitted by bcapp otherwise. The keys that depend on price:</p>
+  <h3>How the displayed price changes</h3>
+  <p>The theme only paints <code>response.data.price</code> (<code>updateView</code>, then <code>updatePriceView</code>, in <code>product-details-base.js</code>). It does no math: the text is the <code>formatted</code> strings from the response. Every price row is hidden first, then only the rows whose keys are in the response are shown. A sale or RRP row from before disappears if the new response leaves it out.</p>
   <div class="card-table"><table>
-    <thead><tr><th>Key</th><th>Source when built by storefront</th></tr></thead>
+    <thead><tr><th>In <code>response.data.price</code></th><th>On the page</th></tr></thead>
     <tbody>
-      <tr class="hl"><td><code>price</code></td><td>The GraphQL-decoded price object, the same one as <code>product.price</code> (section 4)</td></tr>
-      <tr><td><code>purchasable</code></td><td><code>can_purchase</code>, which depends on the price being present</td></tr>
-      <tr><td><code>call_for_price_message</code></td><td><code>call_for_price</code> from the GraphQL product</td></tr>
+      <tr><td><code>with_tax</code> / <code>without_tax</code></td><td>The price text. With <code>price_range</code>, it shows <code>min - max</code> instead.</td></tr>
+      <tr><td><code>non_sale_price_with_tax</code> / <code>_without_tax</code></td><td>Shows the "Was" row and switches the label to "Now"</td></tr>
+      <tr><td><code>rrp_with_tax</code> / <code>_without_tax</code></td><td>Shows the RRP row</td></tr>
+      <tr><td><code>saved</code></td><td>Shows the "you save" row</td></tr>
+      <tr class="hl"><td>no <code>price</code> object</td><td>Every price row is hidden. bcapp leaves <code>price</code> out when a call-for-price message is set. When the price is null it also sets <code>purchasable: false</code>.</td></tr>
     </tbody>
-  </table>
-  <div style="padding:0 12px 10px;" class="small muted">storefront: <code>stencil/pageobjects/productdetails/bcdatascript/ProductAttributesBcDataBuilder.scala</code></div></div>
+  </table></div>
+  <p class="small muted">The same response also drives the bulk pricing table (<code>response.content</code>), stock and messages, and the add-to-cart state.</p>
 
-  <div class="callout amber"><strong>Net effect.</strong> With the PDP flag on, the first paint can be priced by the Pricing service through StorefrontGraphQL. After the shopper changes an option, the price shown is whatever bcapp returns from this endpoint. The two can come from different implementations.</div>
+  <h3>Caches</h3>
+  <div class="card-table"><table>
+    <thead><tr><th>Layer</th><th>TTL</th><th>What it holds</th></tr></thead>
+    <tbody>
+      <tr><td>Theme, browser, storefront proxy</td><td>none</td><td>A plain <code>fetch</code> <code>POST</code>: no cache option, no debounce. The router has no cache code; I did not read the proxy client.</td></tr>
+      <tr><td>bcapp controller, flag <code>STRF-8708.enable_redis_caching_for_remote_product_attributes</code></td><td class="t">20 s</td><td>The whole response, price included. Key on <code>master</code>: product, selected attributes, hide-rule flag. On for tier 3 stores only (<code>science-values.php</code>).</td></tr>
+      <tr><td>bcapp guest price cache (<code>ProductPriceCache</code>)</td><td class="t">90 s by default</td><td>Guest shoppers only, per selected item, keyed by customer group, channel and currency. Selection-pricing path only. TTL is <code>pricing.guest_pricing_cache_ttl</code>.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout amber"><strong>Open bug, bigcommerce#71207 (PRICE-3027).</strong> The controller's key has no customer group, channel or currency, so a guest can be served a customer-group price for up to 20 s, and the reverse. The PR adds <code>::cg</code>, <code>::ch</code> and <code>::cur</code> to the key. Other shopper-specific values, such as the geo-IP tax zone, are still not in the key.</div>
+
+  <h3>Watch out</h3>
+  <ul>
+    <li><strong>Race.</strong> The option-change handler has no abort signal and no stale-response check, so with quick changes the last response to arrive wins. The page-load handler does have a guard.</li>
+    <li><strong>Failure.</strong> The handler does not check <code>err</code>. If the request fails, <code>response.data</code> throws a <code>TypeError</code> and the old price stays.</li>
+  </ul>
+
+  <div class="callout amber"><strong>Net effect.</strong> With the PDP flag on, the first paint can be priced by the Pricing service through StorefrontGraphQL. After an option change, the price comes from bcapp's own implementation of the same rules. The two can disagree.</div>
+  <p class="small muted">Read from source, not run against a store. The bcapp files were read from a local checkout on branch <code>CHECKOUT-9770-3</code>: the controller matches <code>master</code>, the <code>app/Pricing</code> files were not compared.</p>
 
   <hr class="sep">
 
@@ -787,7 +824,7 @@ fragment Pricing on Prices {
     <li><strong>What triggers it.</strong> The theme in the browser: once on page load, and on every option change.</li>
     <li><strong>Who makes the call.</strong> The browser. The storefront service only proxies it to bcapp.</li>
     <li><strong>Which API.</strong> The remote API, with the serialized product form as the body. It is not GraphQL: the Cornerstone theme (<code>assets/js</code>) contains no GraphQL calls, so after load its browser code never asks Storefront GraphQL for a variant price. Other themes could differ; I only read Cornerstone.</li>
-    <li><strong>Whether it reaches the Pricing service.</strong> Not confirmed. bcapp prices this response, and I cannot see bcapp.</li>
+    <li><strong>Who prices it.</strong> bcapp, not <code>ListEstimatedTaxProductPrices</code>. It asks the Pricing service only for the price list and its records, then calculates the price and tax itself. See section 2.</li>
     <li><strong>Where the result lands.</strong> <code>response.data</code>, applied by <code>updateView</code>. The option-change call also asks for the <code>products/bulk-discount-rates</code> template, so <code>response.content</code> is rendered too.</li>
   </ul>
   <p class="small muted">So the selection in the URL when the page is rendered is priced through GraphQL (part 1). A selection the shopper makes afterwards is priced through this call.</p>
