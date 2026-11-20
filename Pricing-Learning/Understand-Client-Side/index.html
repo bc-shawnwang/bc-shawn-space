@@ -185,6 +185,14 @@ h4.sub{font-size:15.5px;font-weight:650;margin:30px 0 8px;color:var(--text);text
 .sq-foot{fill:var(--muted);font:11px var(--sans);}
 .sqwrap[hidden]{display:none;}
 .mode-notes{font-size:13px;color:var(--muted);margin:0 0 10px;}
+
+.card-table.f td:first-child code{white-space:nowrap;word-break:keep-all;}
+.src{display:inline-block;font-family:var(--mono);font-size:10.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--border);margin:0 4px 3px 0;white-space:nowrap;}
+.src.cat{background:var(--blue-bg);color:var(--blue-text);}
+.src.pl{background:var(--teal-bg);color:var(--teal-text);}
+.src.tax{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-dim);}
+.src.promo{background:rgba(139,124,240,.14);color:var(--violet);}
+.src.calc{background:var(--surface-2);color:var(--muted);}
 </style>
 </head>
 <body>
@@ -1054,7 +1062,69 @@ sequenceDiagram
     </tbody>
   </table></div>
 
-  <div class="callout amber"><strong>Not verified.</strong> I did not run a cart through either path, so I have not checked that the two paths return the same price for the same cart. <code>PriceAssignmentServiceCartPricingTest</code> covers the flag-on mapping only. The add-to-cart hop from Storefront, Manual Order, and where <code>GetCartPricing</code> is called from outside bcapp are not traced. The Pricing service side was read from the <code>pricing</code> repo, not run.</div>
+  <h3 id="cart-api">Prices in the Storefront Checkout API response</h3>
+  <p>The Storefront Checkout API (<code>GET /api/storefront/checkouts/{id}</code>) is built from the cart projection above. The price fields are written by <code>PhysicalItemTransformer</code>, <code>DigitalItemTransformer</code>, <code>CustomItemTransformer</code>, <code>Cart/CartTransformer</code> and <code>CheckoutTransformer</code> (<code>app/Http/Storefront/Api/Checkout</code>). Nothing is priced in the transformers: they read the cart and round each value to the currency's decimals (<code>serializePrice</code>).</p>
+
+  <h4 class="sub">Who supplies what</h4>
+  <div class="card-table"><table>
+    <thead><tr><th>Source</th><th>What it contributes</th><th>Cart field it ends up in</th></tr></thead>
+    <tbody>
+      <tr><td><span class="src cat">Catalog</span></td><td>The product or variant prices: <code>price</code>, <code>calculated_price</code> (sale price already applied), <code>retail_price</code>, plus bulk tiers, option rules and picklists used to adjust them. With the flag off bcapp reads these from its own catalog gateway. With the flag on the Pricing service asks Catalog (<code>ListCatalogPrices</code>).</td><td><code>itemPrice</code>, then <code>basePrice</code></td></tr>
+      <tr><td><span class="src pl">Pricing service</span></td><td>When a price list applies, its record replaces the catalog <code>price</code>, <code>calculated_price</code>, <code>sale_price</code>, <code>retail_price</code> and MAP, and brings its own bulk tiers. Also whether prices are entered tax inclusive. With the flag on, the service also does the adjustments and returns the final per-item price: for a price list record, bulk tier, rules, picklists; for a catalog price, rules, bulk tier, customer group discounts, picklists.</td><td><code>itemPrice</code>, <code>basePrice</code>, <code>pricesEnteredTaxInclusive</code></td></tr>
+      <tr><td><span class="src tax">Tax</span></td><td>The tax-inclusive and tax-exclusive unit price and totals of each line, from the tax estimate (<code>CartTaxItemApplier</code>). Used to show prices the way the shopper's tax zone and customer group display them.</td><td>item <code>price</code>, <code>discountedTotal</code>, <code>calculationTotal</code></td></tr>
+      <tr><td><span class="src promo">Promotions</span></td><td>Product-based discounts and coupon amounts on each line, and order-level discounts on the cart.</td><td>item <code>discounts</code>, cart <code>discountAmount</code></td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">So the catalog and Pricing service decide the <strong>starting price</strong> of a line. Everything the shopper sees after that (sale price, totals, strike-through) is arithmetic in bcapp on top of it, with the tax and promotion results.</p>
+
+  <h4 class="sub">Two inputs the formulas share</h4>
+  <ul>
+    <li><code>displayTaxInclusive</code>: whether to show prices with tax. <code>QuoteTaxPriceDisplayService::shouldDisplayTaxInclusive</code> decides it from the cart's tax zone and customer group.</li>
+    <li><code>pricesEnteredTaxInclusive</code>: how the merchant entered prices, set during hydration (above). It is not in the response; it only affects <code>comparisonPrice</code>.</li>
+  </ul>
+
+  <h4 class="sub">Line items (physical and digital)</h4>
+  <div class="callout amber"><strong>Name clash.</strong> <code>salePrice</code> here is <em>not</em> the catalog <code>sale_price</code>. It is the unit price after product-based discounts. A catalog sale is already inside <code>listPrice</code>.</div>
+  <div class="card-table f"><table>
+    <thead><tr><th>Field</th><th>Concept</th><th>Starts as</th><th>Logic</th></tr></thead>
+    <tbody>
+      <tr><td><code>originalPrice</code></td><td>The product's regular price, before any sale or adjustment</td><td><span class="src cat">Catalog</span> <span class="src pl">Pricing service</span></td><td><code>itemPrice.price</code>: the <code>price</code> from the catalog, or from the price list record. 0 if the line has no item price (for example a custom product).</td></tr>
+      <tr><td><code>listPrice</code></td><td>Unit price before discounts: what the line costs in the cart</td><td><span class="src cat">Catalog</span> <span class="src pl">Pricing service</span> <span class="src calc">Computed</span></td><td><code>basePrice</code>, set at hydration from the result's <code>calculated_price</code>, so it includes a catalog sale, the bulk tier for the quantity, option rules and picklists. 0 for a free item added by a promotion.</td></tr>
+      <tr><td><code>retailPrice</code></td><td>The suggested retail price (MSRP), for display</td><td><span class="src cat">Catalog</span> <span class="src pl">Pricing service</span></td><td><code>itemPrice.retailPrice</code>, passed through. Not recalculated, and not used by the other fields.</td></tr>
+      <tr><td><code>extendedListPrice</code></td><td>Line total before discounts</td><td><span class="src calc">Computed</span></td><td><code>listPrice &times; quantity</code></td></tr>
+      <tr><td><code>discountAmount</code></td><td>Product-based discounts on the line, excluding coupons</td><td><span class="src promo">Promotions</span></td><td><code>getProductBasedDiscountTotalExcludeCoupon</code>: the sum of the line's product-based discounts minus the coupon part. Line total, not per unit.</td></tr>
+      <tr><td><code>couponAmount</code></td><td>The coupon part of those discounts</td><td><span class="src promo">Promotions</span></td><td>Sum of the product-based discounts that are coupon discounts</td></tr>
+      <tr><td><code>discounts[]</code></td><td>Each discount on the line, by ID</td><td><span class="src promo">Promotions</span></td><td><code>{ id, discountedAmount }</code> for every entry in <code>getDiscounts()</code>, with a <code>displayName</code> when the manual discount name flag is on</td></tr>
+      <tr><td><code>salePrice</code></td><td>Unit price the shopper pays after line discounts</td><td><span class="src calc">Computed</span> <span class="src tax">Tax</span></td><td>The unit price in the display tax treatment (<code>getPrice(displayTaxInclusive)</code>, from the tax estimate) minus <code>discountAmount &divide; quantity</code></td></tr>
+      <tr><td><code>extendedSalePrice</code></td><td>Line total after line discounts</td><td><span class="src calc">Computed</span> <span class="src tax">Tax</span></td><td><code>salePrice &times; quantity</code></td></tr>
+      <tr><td><code>comparisonPrice</code></td><td>The price to show as the "was" price next to the sale price</td><td><span class="src calc">Computed</span></td><td><code>listPrice</code> when there is a discount and prices are entered the way they are displayed (<code>pricesEnteredTaxInclusive == displayTaxInclusive</code>). Otherwise <code>salePrice</code>, so no strike-through.</td></tr>
+      <tr><td><code>extendedComparisonPrice</code></td><td>Same, as a line total</td><td><span class="src calc">Computed</span></td><td><code>extendedListPrice</code> or <code>extendedSalePrice</code>, by the same rule</td></tr>
+      <tr><td><code>isCustomPrice</code></td><td>Whether the price was set by hand, not by pricing</td><td><span class="src calc">Computed</span></td><td><code>false</code> for every line priced by hydration (<code>setBasePrice(..., false)</code>). True for lines with a merchant-set price, which hydration skips, and for free items added by a promotion.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted"><strong>Custom items</strong> return only <code>listPrice</code> and <code>extendedListPrice</code>, from <code>basePrice</code>. <strong>Gift certificates</strong> are not covered. The catalog <code>sale_price</code> and MAP are kept on <code>itemPrice</code> but are not in this response.</p>
+
+  <p><strong>Example.</strong> A variant has a catalog <code>calculated_price</code> of $50.00 and quantity 2. A promotion takes $10.00 off the line. Prices are entered and displayed tax exclusive.</p>
+  <div class="card-table"><table>
+    <thead><tr><th><code>listPrice</code></th><th><code>extendedListPrice</code></th><th><code>discountAmount</code></th><th><code>salePrice</code></th><th><code>extendedSalePrice</code></th><th><code>comparisonPrice</code></th></tr></thead>
+    <tbody><tr><td>50.00</td><td>100.00</td><td>10.00</td><td>45.00 (50 &minus; 10 &divide; 2)</td><td>90.00</td><td>50.00 (struck through)</td></tr></tbody>
+  </table></div>
+
+  <h4 class="sub">Cart and checkout totals</h4>
+  <div class="card-table f"><table>
+    <thead><tr><th>Field</th><th>Concept</th><th>Logic</th></tr></thead>
+    <tbody>
+      <tr><td><code>cart.baseAmount</code></td><td>Cart total before any discount</td><td><code>getBaseSubTotal</code>: the sum over visible items of the item's <em>calculation total</em>. That is the tax estimate's amount for the line, inclusive or exclusive by display setting (<code>applyCalculationTotals</code>, flag <code>TAX-2763.set_calculation_total</code>), or <code>listPrice &times; quantity</code> when no calculation total is set (flag off, or no tax estimate).</td></tr>
+      <tr><td><code>cart.discountAmount</code></td><td>Order-level discounts only</td><td>The cart's total discount minus all product-based discounts. Converted to the display tax treatment when <code>TAX-2513.convert_discount_amounts_to_tax_display_treatment</code> is on.</td></tr>
+      <tr><td><code>cart.cartAmount</code></td><td>Cart total after all discounts</td><td><code>getDiscountedSubTotal(displayTaxInclusive)</code>: the sum of each item's discounted total</td></tr>
+      <tr><td><code>cart.discounts[]</code></td><td>Discount per line</td><td><code>{ id, discountedAmount }</code> from <code>getDiscountAmountTotal()</code>, which includes coupons</td></tr>
+      <tr><td><code>checkout.subtotal</code></td><td>Items subtotal shown at checkout</td><td><code>getSubTotal(includingTax)</code> minus product-based discounts, where the subtotal is the sum of item totals</td></tr>
+      <tr><td><code>checkout.grandTotal</code></td><td>Amount to pay</td><td>Discounted item subtotal (tax inclusive) + gift wrapping + shipping + handling + fees &minus; gift certificates, never below 0</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">Shipping, handling, wrapping, <code>taxTotal</code> and the per-discount totals on the checkout object are not traced here.</p>
+
+  <div class="callout amber"><strong>Not verified.</strong> I did not run a cart through either path, so I have not checked that the two paths return the same price for the same cart. <code>PriceAssignmentServiceCartPricingTest</code> covers the flag-on mapping only. The add-to-cart hop from Storefront, Manual Order, a live response from the Checkout API (the field logic was read from the transformers, not called), and where <code>GetCartPricing</code> is called from outside bcapp are not traced. The Pricing service side was read from the <code>pricing</code> repo, not run.</div>
   <p class="small muted">Source, repo <code>bigcommerce</code>: <code>app/Checkout/Cart/CartProjectionService.php</code>, <code>app/Checkout/Cart/Catalog/PriceAssignmentService.php</code>, <code>app/Pricing/{PricingService,SelectionPricingService,CartPricingServiceClient,CartPricingGrpcMapper,PriceListAssignmentService,CatalogPricingService}.php</code>, <code>lib/gRPC/PriceListClient.php</code>, <code>config/Experiments/PricingExperiments.php</code>. Repo <code>pricing</code>: <code>CartPricingService.scala</code>, <code>CartCatalogServiceClient.scala</code>.</p>
 
 
