@@ -168,6 +168,23 @@ ol.legend{margin:10px 0 20px;padding-left:20px;font-size:13.5px;}
 ol.legend li{margin-bottom:8px;}
 h3.part{font-size:17px;font-weight:650;margin:44px 0 8px;padding-top:16px;border-top:1px solid var(--border);}
 h4.sub{font-size:15.5px;font-weight:650;margin:30px 0 8px;color:var(--text);text-transform:none;letter-spacing:0;}
+
+/* cart price hydration */
+.sqwrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin:8px 0 14px;overflow-x:auto;}
+.sqwrap .sq{min-width:760px;width:100%;height:auto;display:block;}
+.sq-life{stroke:var(--border);stroke-width:1.2;stroke-dasharray:4 4;}
+.sq-box{fill:var(--surface-2);stroke:var(--border);}
+.sq-name{fill:var(--text);font:600 12.5px var(--sans);}
+.sq-sub{fill:var(--muted);font:10.5px var(--mono);}
+.sq-call{stroke:var(--teal-text);stroke-width:1.6;}
+.sq-ret{stroke:var(--blue-text);stroke-width:1.4;stroke-dasharray:5 3;}
+.sq-head{fill:var(--muted);}
+.sq-t{fill:var(--text);font:11.5px var(--mono);}
+.sq-num{fill:var(--muted);font:600 11px var(--mono);}
+.sq-note{fill:var(--amber-bg);stroke:var(--amber-dim);}
+.sq-foot{fill:var(--muted);font:11px var(--sans);}
+.sqwrap[hidden]{display:none;}
+.mode-notes{font-size:13px;color:var(--muted);margin:0 0 10px;}
 </style>
 </head>
 <body>
@@ -835,7 +852,211 @@ fragment Pricing on Prices {
   <!-- 5. Cart / Checkout                                                -->
   <!-- ================================================================ -->
   <h2 id="cart">5. Cart / Checkout (includes Manual Order) <span class="badge wip">WIP</span></h2>
-  <p>WIP</p>
+  <div class="callout blue"><strong>Scope:</strong> how a cart gets its line item prices when bcapp builds the cart projection, <code>CartProjectionService::applyPrices</code>. Taxes, discounts, shipping and promotions that run afterwards are out of scope. Manual Order is not traced.</div>
+  <p>Every time bcapp builds a cart that has items, it asks the pricing code for the price of each line and writes the answer onto the cart items. Two experiments decide <strong>where that price comes from</strong>. This section follows the path for each.</p>
+
+  <h3>Entry point</h3>
+  <ul>
+    <li><code>CartProjectionService::build()</code> and <code>findById()</code> load the cart, then call <code>applyPricingAndVariantData()</code> if it has items (<code>CartProjectionService.php:146</code>). <code>CheckoutService</code> calls the same method after it changes a checkout (lines 997, 1187, 1254, 1270).</li>
+    <li>That method runs <code>applyPrices()</code> first. Totals, item-level manual discounts, cart discounts and variant data come after it, so every later step starts from the prices set here.</li>
+    <li><code>applyPrices()</code> calls <code>PriceAssignmentService::hydrate(currencyCode, customerGroupId, items, channelId)</code>. Items are the cart items that need a price: custom products, gift certificates and items with a custom price are skipped (<code>ItemsCollection::getItemsThatNeedPrice</code>).</li>
+  </ul>
+
+  <h3>The two flags</h3>
+  <div class="card-table"><table>
+    <thead><tr><th>Experiment</th><th>Off</th><th>On</th></tr></thead>
+    <tbody>
+      <tr><td><code>PROJECT-5992.Feature_price_lists_tax_inclusive_exclusive</code></td><td><strong>Legacy path.</strong> <code>getSelectionPriceCollection</code>, no price list tax setting, <code>hydrate()</code> returns <code>null</code>. Cart tax setting comes from the store.</td><td>Price list tax inc/ex is honoured. <code>hydrate()</code> returns a <code>HydratePriceResult</code>. Then the flag below decides the source.</td></tr>
+      <tr><td><code>PROJECT-8948.hydrate_cart_prices_from_pricing_service</code></td><td><strong>bcapp prices it.</strong> <code>getSelectionPriceCollectionWithTaxEnteredAs</code>, in PHP, with two RPCs to the Pricing service for the price list.</td><td><strong>Pricing service prices it.</strong> One <code>GetCartPricing</code> RPC.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">The second flag is only read when the first is on. The code comment warns not to enable it before cart pricing phase 2 (PROJECT-8947) is finished. Both are LaunchDarkly boolean experiments, read per store on every <code>hydrate()</code>.</p>
+  <div class="callout amber"><strong>Flag name.</strong> You wrote <code>PROJECT-8948.compare_cart_prices_from_pricing_service</code>. The checkout I read (branch <code>CHECKOUT-9770-3</code>; the string is also absent from <code>origin/master</code>) has only <code>hydrate_cart_prices_from_pricing_service</code> (<code>PricingExperiments.php:15</code>), and it switches the source, with no compare mode. If a compare flag exists, it is on a branch I have not seen. This page follows the flag I found.</div>
+
+  <h3>Process: flag off and flag on</h3>
+  <p class="mode-notes">Both diagrams assume <code>PROJECT-5992</code> is on. Solid arrows are calls, dashed are responses.</p>
+  <div class="switcher" id="sw-cart">
+    <div class="label">Pick the flag</div>
+    <div class="seg" role="group" aria-label="hydrate_cart_prices_from_pricing_service"></div>
+    <div class="sqwrap" id="sq-off"><svg class="sq" viewBox="0 0 860 504" role="img" aria-label="Flag off" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ah-flagoff" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="sq-head"/></marker></defs>
+<line class="sq-life" x1="107" y1="46" x2="107" y2="480"/>
+<rect class="sq-box" x="15" y="4" width="184" height="42" rx="7"/>
+<text class="sq-name" x="107" y="22" text-anchor="middle">Cart projection</text>
+<text class="sq-sub" x="107" y="38" text-anchor="middle">CartProjectionService</text>
+<line class="sq-life" x1="322" y1="46" x2="322" y2="480"/>
+<rect class="sq-box" x="230" y="4" width="184" height="42" rx="7"/>
+<text class="sq-name" x="322" y="22" text-anchor="middle">BCApp Pricing</text>
+<text class="sq-sub" x="322" y="38" text-anchor="middle">PriceAssignmentService</text>
+<line class="sq-life" x1="537" y1="46" x2="537" y2="480"/>
+<rect class="sq-box" x="445" y="4" width="184" height="42" rx="7"/>
+<text class="sq-name" x="537" y="22" text-anchor="middle">BCApp Catalog</text>
+<text class="sq-sub" x="537" y="38" text-anchor="middle">CatalogPricingService</text>
+<line class="sq-life" x1="752" y1="46" x2="752" y2="480"/>
+<rect class="sq-box" x="660" y="4" width="184" height="42" rx="7"/>
+<text class="sq-name" x="752" y="22" text-anchor="middle">Pricing RPC</text>
+<text class="sq-sub" x="752" y="38" text-anchor="middle">Pricing + Price Lists</text>
+<line class="sq-call" x1="107" y1="80" x2="319" y2="80" marker-end="url(#ah-flagoff)"/>
+<text class="sq-t" x="214" y="73" text-anchor="middle">hydrate(currency, group, items, channel)</text>
+<text class="sq-num" x="6" y="84">1</text>
+<line class="sq-call" x1="322" y1="116" x2="749" y2="116" marker-end="url(#ah-flagoff)"/>
+<text class="sq-t" x="537" y="109" text-anchor="middle">FindPriceListAssignment (cached)</text>
+<text class="sq-num" x="6" y="120">2</text>
+<line class="sq-ret" x1="752" y1="152" x2="325" y2="152" marker-end="url(#ah-flagoff)"/>
+<text class="sq-t" x="537" y="145" text-anchor="middle">price list ID + tax entered as</text>
+<text class="sq-num" x="6" y="156">3</text>
+<line class="sq-call" x1="322" y1="202" x2="749" y2="202" marker-end="url(#ah-flagoff)"/>
+<text class="sq-t" x="537" y="181" text-anchor="middle">ListPriceRecordsAllowStaleNoCount</text>
+<text class="sq-t" x="537" y="195" text-anchor="middle">(variant IDs, currency)</text>
+<text class="sq-num" x="6" y="206">4</text>
+<line class="sq-ret" x1="752" y1="238" x2="325" y2="238" marker-end="url(#ah-flagoff)"/>
+<text class="sq-t" x="537" y="231" text-anchor="middle">price records + bulk tiers</text>
+<text class="sq-num" x="6" y="242">5</text>
+<line class="sq-call" x1="322" y1="274" x2="534" y2="274" marker-end="url(#ah-flagoff)"/>
+<text class="sq-t" x="429" y="267" text-anchor="middle">getPricesBatch (see note)</text>
+<text class="sq-num" x="6" y="278">6</text>
+<line class="sq-ret" x1="537" y1="310" x2="325" y2="310" marker-end="url(#ah-flagoff)"/>
+<text class="sq-t" x="429" y="303" text-anchor="middle">catalog prices</text>
+<text class="sq-num" x="6" y="314">7</text>
+<rect class="sq-note" x="330" y="328" width="290" height="38" rx="5"/>
+<text class="sq-t" x="338" y="343">per item: bulk tier for quantity,</text>
+<text class="sq-t" x="338" y="357">option rules, bundled products</text>
+<text class="sq-num" x="6" y="351">8</text>
+<line class="sq-ret" x1="322" y1="400" x2="110" y2="400" marker-end="url(#ah-flagoff)"/>
+<text class="sq-t" x="214" y="393" text-anchor="middle">selection prices + tax inc/ex flag</text>
+<text class="sq-num" x="6" y="404">9</text>
+<rect class="sq-note" x="115" y="418" width="290" height="38" rx="5"/>
+<text class="sq-t" x="123" y="433">setBasePrice, setItemPrice,</text>
+<text class="sq-t" x="123" y="447">remove items with no price</text>
+<text class="sq-num" x="6" y="441">10</text>
+<text class="sq-foot" x="6" y="498">Note: catalog is asked only when no price list applies, or the list&#x27;s tax setting is &quot;use global&quot;. Same-process call, not an RPC.</text>
+</svg></div>
+    <div class="sqwrap" id="sq-on" hidden><svg class="sq" viewBox="0 0 860 486" role="img" aria-label="Flag on" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ah-flagon" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="sq-head"/></marker></defs>
+<line class="sq-life" x1="107" y1="46" x2="107" y2="462"/>
+<rect class="sq-box" x="15" y="4" width="184" height="42" rx="7"/>
+<text class="sq-name" x="107" y="22" text-anchor="middle">Cart projection</text>
+<text class="sq-sub" x="107" y="38" text-anchor="middle">CartProjectionService</text>
+<line class="sq-life" x1="322" y1="46" x2="322" y2="462"/>
+<rect class="sq-box" x="230" y="4" width="184" height="42" rx="7"/>
+<text class="sq-name" x="322" y="22" text-anchor="middle">BCApp Pricing client</text>
+<text class="sq-sub" x="322" y="38" text-anchor="middle">CartPricingServiceClient</text>
+<line class="sq-life" x1="537" y1="46" x2="537" y2="462"/>
+<rect class="sq-box" x="445" y="4" width="184" height="42" rx="7"/>
+<text class="sq-name" x="537" y="22" text-anchor="middle">Pricing RPC</text>
+<text class="sq-sub" x="537" y="38" text-anchor="middle">CartPricingService</text>
+<line class="sq-life" x1="752" y1="46" x2="752" y2="462"/>
+<rect class="sq-box" x="660" y="4" width="184" height="42" rx="7"/>
+<text class="sq-name" x="752" y="22" text-anchor="middle">Catalog RPC</text>
+<text class="sq-sub" x="752" y="38" text-anchor="middle">ListCatalogPrices</text>
+<line class="sq-call" x1="107" y1="80" x2="319" y2="80" marker-end="url(#ah-flagon)"/>
+<text class="sq-t" x="214" y="73" text-anchor="middle">hydrate(currency, group, items, channel)</text>
+<text class="sq-num" x="6" y="84">1</text>
+<rect class="sq-note" x="330" y="98" width="290" height="38" rx="5"/>
+<text class="sq-t" x="338" y="113">createCartPriceRequest</text>
+<text class="sq-t" x="338" y="127">(skips custom, gift cert, custom price)</text>
+<text class="sq-num" x="6" y="121">2</text>
+<line class="sq-call" x1="322" y1="184" x2="534" y2="184" marker-end="url(#ah-flagon)"/>
+<text class="sq-t" x="429" y="163" text-anchor="middle">GetCartPricing</text>
+<text class="sq-t" x="429" y="177" text-anchor="middle">(store, currency, group, channel, items)</text>
+<text class="sq-num" x="6" y="188">3</text>
+<line class="sq-call" x1="537" y1="220" x2="749" y2="220" marker-end="url(#ah-flagon)"/>
+<text class="sq-t" x="644" y="213" text-anchor="middle">ListCatalogPrices (all items)</text>
+<text class="sq-num" x="6" y="224">4</text>
+<line class="sq-ret" x1="752" y1="256" x2="540" y2="256" marker-end="url(#ah-flagon)"/>
+<text class="sq-t" x="644" y="249" text-anchor="middle">catalog prices</text>
+<text class="sq-num" x="6" y="260">5</text>
+<rect class="sq-note" x="545" y="274" width="290" height="38" rx="5"/>
+<text class="sq-t" x="553" y="289">pricing mode, price list records,</text>
+<text class="sq-t" x="553" y="303">bulk tier, option rules, discounts</text>
+<text class="sq-num" x="6" y="297">6</text>
+<line class="sq-ret" x1="537" y1="346" x2="325" y2="346" marker-end="url(#ah-flagon)"/>
+<text class="sq-t" x="429" y="339" text-anchor="middle">per-item price + prices_entered_tax_inclusive</text>
+<text class="sq-num" x="6" y="350">7</text>
+<line class="sq-ret" x1="322" y1="382" x2="110" y2="382" marker-end="url(#ah-flagon)"/>
+<text class="sq-t" x="214" y="375" text-anchor="middle">selection prices + tax inc/ex flag</text>
+<text class="sq-num" x="6" y="386">8</text>
+<rect class="sq-note" x="115" y="400" width="290" height="38" rx="5"/>
+<text class="sq-t" x="123" y="415">setBasePrice, setItemPrice,</text>
+<text class="sq-t" x="123" y="429">remove items with no price</text>
+<text class="sq-num" x="6" y="423">9</text>
+<text class="sq-foot" x="6" y="480">Price list assignment and records are read inside the Pricing service, so bcapp makes one RPC for the whole cart.</text>
+</svg></div>
+  </div>
+  <details class="small"><summary>Mermaid source for the two diagrams</summary>
+<pre class="code">sequenceDiagram
+  participant Cart as Cart projection
+  participant BP as BCApp Pricing
+  participant BC as BCApp Catalog
+  participant PR as Pricing RPC
+  Cart-&gt;&gt;BP: hydrate(currency, group, items, channel)
+  BP-&gt;&gt;PR: FindPriceListAssignment (cached)
+  PR--&gt;&gt;BP: price list ID + tax entered as
+  BP-&gt;&gt;PR: ListPriceRecordsAllowStaleNoCount
+  PR--&gt;&gt;BP: price records + bulk tiers
+  BP-&gt;&gt;BC: getPricesBatch (no list, or list is "use global")
+  BC--&gt;&gt;BP: catalog prices
+  BP-&gt;&gt;BP: bulk tier, option rules, bundled products
+  BP--&gt;&gt;Cart: selection prices + tax inc/ex flag
+  Cart-&gt;&gt;Cart: setBasePrice, setItemPrice, remove unpriced items
+
+sequenceDiagram
+  participant Cart as Cart projection
+  participant PC as BCApp Pricing client
+  participant PR as Pricing RPC
+  participant CR as Catalog RPC
+  Cart-&gt;&gt;PC: hydrate(currency, group, items, channel)
+  PC-&gt;&gt;PR: GetCartPricing
+  PR-&gt;&gt;CR: ListCatalogPrices (all items)
+  CR--&gt;&gt;PR: catalog prices
+  PR-&gt;&gt;PR: mode, price list records, tier, rules, discounts
+  PR--&gt;&gt;PC: per-item price + prices_entered_tax_inclusive
+  PC--&gt;&gt;Cart: selection prices + tax inc/ex flag
+  Cart-&gt;&gt;Cart: setBasePrice, setItemPrice, remove unpriced items</pre>
+  </details>
+
+  <h3>Services and functions called</h3>
+  <h4 class="sub">Flag off: bcapp prices it</h4>
+  <div class="card-table"><table>
+    <thead><tr><th>Function</th><th>Input</th><th>Output</th></tr></thead>
+    <tbody>
+      <tr><td><code>PriceAssignmentService::hydrate</code><br><span class="muted small">then <code>createPriceCollectionRequest</code></span></td><td>currency code, customer group ID, items, channel ID</td><td><code>SelectionPriceCollectionRequest</code>: per item product ID, variant ID, quantity, selected options, line item ID as reference, combination ID</td></tr>
+      <tr><td><code>PricingService::getSelectionPriceCollectionWithTaxEnteredAs</code><br><span class="muted small">to <code>SelectionPricingService::getPriceCollectionWithPriceListTaxEnteredAs</code></span></td><td>that request</td><td><code>SelectionPriceWithPriceListTaxEnteredAs</code>: a list of <code>SelectionPriceWithNullablePrices</code> (null when no price) and <code>pricesEnteredTaxInclusive</code></td></tr>
+      <tr><td><code>PriceListAssignmentService::findPriceListAssignment</code><br><span class="muted small">gRPC <code>FindPriceListAssignment</code></span></td><td>customer group ID, channel ID</td><td><code>PriceListAssignment</code>: price list ID and tax entered as (inclusive, exclusive, use global). Empty if the PriceLists feature is off. Cached.</td></tr>
+      <tr><td><code>PriceListClient::getPriceRecordCollection</code><br><span class="muted small">gRPC <code>ListPriceRecordsAllowStaleNoCount</code></span></td><td>price list ID, variant IDs, currency, bulk tier expander</td><td><code>PriceRecord[]</code> with prices and bulk tiers. Read from a read-only database that may be slightly stale.</td></tr>
+      <tr><td><code>CatalogPricingService::getPricesBatch</code></td><td>catalog price requests (product, variant, options)</td><td>catalog prices, converted to the cart currency and rounded</td></tr>
+      <tr><td><code>SelectionPricingService::calculatePrice</code></td><td>one price record, the request, bundled prices, currency</td><td><code>SelectionPrice</code>: record price, then bulk tier for the quantity, option rules, bundled product prices</td></tr>
+    </tbody>
+  </table></div>
+
+  <h4 class="sub">Flag on: Pricing service prices it</h4>
+  <div class="card-table"><table>
+    <thead><tr><th>Function</th><th>Input</th><th>Output</th></tr></thead>
+    <tbody>
+      <tr><td><code>CartPricingGrpcMapper::createCartPriceRequest</code></td><td>same four arguments as <code>hydrate</code></td><td><code>CartPriceRequest</code>: per item line item ID, product ID, variant ID, quantity, selected options, combination ID</td></tr>
+      <tr><td><code>CartPricingServiceClient::getCartPricing</code><br><span class="muted small">gRPC <code>GetCartPricing</code>, with a timeout</span></td><td><code>GetCartPricingReqProto</code>: <code>store_id</code>, <code>currency_code</code>, <code>customer_group_id</code>, <code>channel_id</code>, <code>request_items[]</code> (<code>cart_item_id</code>, <code>product_id</code>, optional <code>variant_id</code>, <code>quantity</code>, optional <code>product_attribute_combination_id</code>, <code>selected_options[]</code>)</td><td><code>GetCartPricingRespProto</code>: <code>selection_prices[]</code> and <code>prices_entered_tax_inclusive</code>. Mapped by <code>convertCartResponse</code> to the same <code>SelectionPriceWithPriceListTaxEnteredAs</code> as the flag-off path.</td></tr>
+      <tr><td>Inside the service: <code>CartPricingService.buildPrices</code></td><td>cart pricing context and request items</td><td>Per item: <code>price</code>, <code>calculated_price</code>, <code>sale_price</code>, <code>retail_price</code>, <code>map_price</code>, applied bulk tier. Price is absent when the item has none. Steps: catalog data, pricing mode, discounts, price list records, adjustments. See the Pricing service page.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">A <code>PricingServiceException</code> from either path is not caught in <code>applyPrices</code>, so a failed price call fails the cart build. The mapper turns a null price in the response into a null selection price, which the next section treats as "no price".</p>
+
+  <h3>What changes on the cart</h3>
+  <p><code>PriceAssignmentService</code> applies the result the same way on both paths, one price per item matched by line item ID.</p>
+  <div class="card-table"><table>
+    <thead><tr><th>Result for an item</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td>Has a price</td><td><code>setBasePrice(calculatedPrice, false, false)</code>: <code>basePrice</code> is set, <code>isCustomPrice</code> stays false, and cached totals on the item are invalidated.<br><code>setItemPrice(Price)</code>: <code>price</code>, <code>calculatedPrice</code> (null becomes 0.0), <code>salePrice</code>, <code>retailPrice</code>, <code>minimumAdvertisedPrice</code>, and <code>bulkPricing</code> (min and max quantity, amount, tier type) when a tier applies.</td></tr>
+      <tr class="hl"><td>No price (null), or <code>calculatedPrice &lt; 0</code></td><td><code>$cart->removeItem($item->getId())</code>. The item disappears silently instead of raising an error, as it does when a product stops being purchasable. Only when <code>PROJECT-5992</code> is on.</td></tr>
+      <tr><td>Not sent to pricing</td><td>Custom products, gift certificates and custom-price items keep the price they already have.</td></tr>
+      <tr><td>The cart</td><td><code>setPricesEnteredTaxInclusive(...)</code>: the price list's tax setting, or the store setting if the list is <em>use global</em>. With <code>PROJECT-5992</code> off, the store setting is used and set right after hydration, because the totals estimate reads it.</td></tr>
+      <tr><td>What happens next</td><td>Totals, manual discounts, cart discounts and variant data use these prices. After the projection is built, <code>estimateAndApplyTaxes</code> runs. The projection is stored with <code>base_price</code>, <code>custom_price</code> and the <code>item_price</code> block (<code>CartProjectionCatalogItemTransformer</code>).</td></tr>
+      <tr><td>Telemetry</td><td>Span annotation <code>price_source</code>: <code>bc_pricing_legacy</code>, <code>bc_pricing_tax_entered_as</code> or <code>pricing_service</code>. A log line when hydration takes over 800 ms. A statsd timing keyed by <code>PriceLists</code> or <code>Catalog</code>.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout amber"><strong>Not verified.</strong> I did not run a cart through either path, so I have not checked that the two paths return the same price for the same cart. <code>PriceAssignmentServiceCartPricingTest</code> covers the flag-on mapping only. The add-to-cart hop from Storefront, Manual Order, and where <code>GetCartPricing</code> is called from outside bcapp are not traced. The Pricing service side was read from the <code>pricing</code> repo, not run.</div>
+  <p class="small muted">Source, repo <code>bigcommerce</code>: <code>app/Checkout/Cart/CartProjectionService.php</code>, <code>app/Checkout/Cart/Catalog/PriceAssignmentService.php</code>, <code>app/Pricing/{PricingService,SelectionPricingService,CartPricingServiceClient,CartPricingGrpcMapper,PriceListAssignmentService,CatalogPricingService}.php</code>, <code>lib/gRPC/PriceListClient.php</code>, <code>config/Experiments/PricingExperiments.php</code>. Repo <code>pricing</code>: <code>CartPricingService.scala</code>, <code>CartCatalogServiceClient.scala</code>.</p>
+
 
   <!-- ================================================================ -->
   <!-- 6. Order                                                          -->
@@ -958,6 +1179,32 @@ fragment Pricing on Prices {
       '<div class="note">' + d.note + '</div>';
   });
 })();
+
+  // ---- 5. cart price hydration: flag off / on ----
+  (function () {
+    var root = document.getElementById('sw-cart');
+    if (!root) return;
+    var seg = root.querySelector('.seg');
+    var off = document.getElementById('sq-off');
+    var on = document.getElementById('sq-on');
+    var buttons = [];
+    function select(key) {
+      buttons.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.key === key)); });
+      off.hidden = key !== 'off';
+      on.hidden = key !== 'on';
+    }
+    [{ key: 'off', label: 'off (bcapp prices it)' }, { key: 'on', label: 'on (Pricing service prices it)' }].forEach(function (o) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.key = o.key;
+      b.textContent = o.label;
+      b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', function () { select(o.key); });
+      seg.appendChild(b);
+      buttons.push(b);
+    });
+    select('off');
+  })();
 </script>
 </body>
 </html>
