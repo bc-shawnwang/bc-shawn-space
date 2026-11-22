@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GetCartPricing</title>
+<style>
+:root{
+  --bg:#10141b;
+  --surface:#171c25;
+  --surface-2:#1c2230;
+  --border:#2a3140;
+  --border-soft:#232a38;
+  --text:#e9e7e0;
+  --muted:#8b93a3;
+  --amber:#e8a33d;
+  --amber-dim:#4a3c22;
+  --amber-bg:rgba(232,163,61,0.13);
+  --violet:#8b7cf0;
+  --blue-bg:rgba(55,138,221,0.14);
+  --blue-text:#7fb4e8;
+  --teal-bg:rgba(29,158,117,0.16);
+  --teal-text:#63d6ab;
+  --red-bg:rgba(226,92,92,0.14);
+  --red-text:#f09a9a;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+body{-webkit-font-smoothing:antialiased;line-height:1.6;}
+main{max-width:920px;margin:0 auto;padding:56px 24px 96px;}
+a{color:var(--amber);}
+a:hover{text-decoration:underline;}
+
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+.eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--violet);display:inline-block;}
+.eyebrow a{color:var(--muted);text-decoration:none;}
+.eyebrow a:hover{color:var(--amber);}
+.eyebrow .sep{opacity:.5;}
+
+h1{font-size:clamp(26px,3.8vw,36px);line-height:1.18;letter-spacing:-0.01em;margin:0 0 12px;}
+h2{font-size:20px;font-weight:650;margin:56px 0 6px;scroll-margin-top:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+h3{font-size:15.5px;font-weight:650;margin:30px 0 8px;}
+h4{font-size:13px;font-weight:650;margin:22px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+p{margin:0 0 14px;}
+p.lede{color:var(--muted);margin:0 0 28px;max-width:680px;font-size:15px;}
+.muted{color:var(--muted);}
+.small{font-size:12.5px;}
+hr.sep{border:none;border-top:1px solid var(--border);margin:44px 0 0;}
+
+code{background:var(--surface-2);padding:1px 6px;border-radius:4px;font-size:12.5px;font-family:var(--mono);border:1px solid var(--border);word-break:break-word;}
+pre.code{background:#0a0d12;color:#c9d1d9;border-radius:8px;padding:14px 16px;font-size:12px;line-height:1.55;font-family:var(--mono);overflow-x:auto;margin:10px 0 18px;border:1px solid var(--border);white-space:pre;}
+pre.code .k{color:#79c0ff;}      /* keys / types */
+pre.code .s{color:#a5d6a7;}      /* strings */
+pre.code .n{color:#ffa657;}      /* numbers */
+pre.code .c{color:#6e7681;}      /* comments */
+pre.code .f{color:#d2a8ff;}      /* fields / fragments */
+.file{display:block;font-family:var(--mono);font-size:11.5px;color:var(--muted);margin:14px 0 -4px;}
+ul,ol{padding-left:20px;margin:0 0 14px;}
+li{margin-bottom:8px;}
+
+/* badges */
+.badge{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:2px 9px;border-radius:999px;border:1px solid var(--border);color:var(--muted);vertical-align:middle;white-space:nowrap;}
+.badge.wip{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-dim);}
+.badge.live{background:var(--teal-bg);color:var(--teal-text);border-color:rgba(29,158,117,.35);}
+.badge.unverified{background:var(--red-bg);color:var(--red-text);border-color:rgba(226,92,92,.3);}
+
+/* callouts */
+.callout{border-radius:8px;padding:12px 16px;font-size:13.5px;margin:0 0 14px;border:1px solid transparent;}
+.callout.blue{background:var(--blue-bg);color:var(--blue-text);}
+.callout.teal{background:var(--teal-bg);color:var(--teal-text);}
+.callout.amber{background:var(--amber-bg);color:var(--amber);}
+.callout.red{background:var(--red-bg);color:var(--red-text);}
+.callout code{background:rgba(0,0,0,.25);border-color:rgba(255,255,255,.1);color:inherit;}
+.callout strong{color:inherit;}
+
+/* tables */
+.card-table{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow-x:auto;margin:10px 0 20px;}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px;}
+th,td{padding:10px 12px;text-align:left;border-top:1px solid var(--border);vertical-align:top;}
+thead th{border-top:none;font-weight:600;background:var(--surface-2);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+td.t{white-space:nowrap;}
+tr.hl td{background:rgba(232,163,61,.07);}
+
+/* definition grid */
+dl.terms{display:grid;grid-template-columns:minmax(150px,230px) 1fr;gap:0;margin:10px 0 20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+dl.terms dt,dl.terms dd{padding:11px 14px;border-top:1px solid var(--border);margin:0;font-size:13.5px;}
+dl.terms dt:first-of-type,dl.terms dd:first-of-type{border-top:none;}
+dl.terms dt{font-weight:600;color:var(--text);background:var(--surface-2);}
+dl.terms dd{color:var(--text);}
+dl.terms dd .muted{font-size:12.5px;}
+@media(max-width:640px){dl.terms{grid-template-columns:1fr;}dl.terms dt{border-top:1px solid var(--border);}dl.terms dd{border-top:none;}}
+
+/* group headings inside terms */
+.termgroup{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);margin:28px 0 -4px;}
+
+/* page cards (sub page links) */
+ul.pages{list-style:none;margin:0;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
+li.page{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:0;transition:border-color .15s ease, background .15s ease;}
+li.page:hover{border-color:var(--amber-dim);background:var(--surface-2);}
+li.page a{display:block;color:var(--text);font-weight:600;font-size:16px;text-decoration:none;}
+li.page a:hover{color:var(--amber);}
+li.page .desc{color:var(--muted);font-size:13.5px;margin-top:4px;}
+
+/* table of contents */
+nav.toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin:0 0 8px;}
+nav.toc .title{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:28px;}
+nav.toc li{margin-bottom:5px;font-size:13.5px;break-inside:avoid;}
+nav.toc a{text-decoration:none;}
+@media(max-width:640px){nav.toc ol{columns:1;}}
+
+/* animated request chain */
+.flow-caption{color:var(--muted);font-size:12.5px;margin:0 0 10px;}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:6px 0 20px;}
+.flow .node{flex:1 1 150px;min-width:140px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;background:var(--surface);animation:nodePulse 8s infinite ease;}
+.flow .node small{display:block;color:var(--muted);font-size:11px;margin-top:3px;}
+.flow .node b{font-weight:600;}
+.flow .node .tag{font-family:var(--mono);font-size:10.5px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.08em;}
+.flow .node:nth-child(1){animation-delay:0s;}
+.flow .node:nth-child(2){animation-delay:.9s;}
+.flow .node:nth-child(3){animation-delay:1.8s;}
+.flow .node:nth-child(4){animation-delay:2.7s;}
+.flow .node:nth-child(5){animation-delay:3.6s;}
+.flow .node:nth-child(6){animation-delay:4.5s;}
+.flow .node:nth-child(7){animation-delay:5.4s;}
+.flow .node.grpc{--c:29,158,117;}
+.flow .node.http{--c:55,138,221;}
+.flow .node.gql{--c:139,124,240;}
+.flow .node{--c:232,163,61;}
+@keyframes nodePulse{
+  0%,2%{box-shadow:none;border-color:var(--border);}
+  6%{box-shadow:0 0 0 2px rgba(var(--c),.5);border-color:rgb(var(--c));}
+  16%,100%{box-shadow:none;border-color:var(--border);}
+}
+@media(prefers-reduced-motion:reduce){.flow .node{animation:none;}html{scroll-behavior:auto;}}
+
+/* interactive switcher */
+.switcher{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:10px 0 20px;}
+.switcher .label{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.seg{display:inline-flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.seg button{font:inherit;font-size:12.5px;font-family:var(--mono);background:var(--surface-2);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;}
+.seg button:hover{color:var(--text);}
+.seg button[aria-pressed="true"]{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-dim);}
+.out{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;}
+.out .cell{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:10px 12px;font-size:13px;}
+.out .cell .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:3px;}
+.out .cell.yes{border-color:rgba(29,158,117,.45);}
+.out .cell.no{opacity:.6;}
+.out .note{grid-column:1/-1;font-size:13px;color:var(--muted);}
+.items{margin-top:12px;}
+.items .row{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:12.5px;}
+.items .row .alias{font-family:var(--mono);color:var(--violet);min-width:190px;}
+.items .row .item{font-family:var(--mono);color:#c9d1d9;}
+.items .row.dedup{opacity:.55;}
+
+footer{margin-top:64px;color:var(--muted);font-family:var(--mono);font-size:12px;display:flex;gap:18px;flex-wrap:wrap;}
+footer a{color:var(--muted);}
+footer a:hover{color:var(--amber);}
+
+/* source tags */
+.src{display:inline-block;font-family:var(--mono);font-size:10.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--border);margin:0 4px 3px 0;white-space:nowrap;}
+.src.cat{background:var(--blue-bg);color:var(--blue-text);}
+.src.pl{background:var(--teal-bg);color:var(--teal-text);}
+.src.calc{background:var(--surface-2);color:var(--muted);}
+.src.bc{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-dim);}
+.card-table.f table{table-layout:fixed;width:100%;min-width:640px;}
+.card-table.f td:first-child code{white-space:normal;overflow-wrap:anywhere;}
+.card-table tr.grp td{background:var(--surface-2);color:var(--muted);font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;}
+.steps{counter-reset:s;list-style:none;padding:0;margin:10px 0 0;}
+.steps li{counter-increment:s;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:8px 12px 8px 40px;margin-bottom:8px;font-size:13px;position:relative;}
+.steps li::before{content:counter(s);position:absolute;left:12px;top:8px;font-family:var(--mono);font-size:12px;color:var(--amber);}
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow"><span class="dot"></span><a href="../../../index.html">bc-shawn-space</a><span class="sep">/</span><a href="../../index.html">Pricing Learning</a><span class="sep">/</span><a href="../index.html">Understand Pricing Service</a><span class="sep">/</span>GetCartPricing</div>
+  <h1>GetCartPricing <span class="badge wip">WIP</span></h1>
+  <p class="lede">How <code>CartPricing.GetCartPricing</code> prices the lines of a cart: what it is for, the flow from request to response, and where every input and output field comes from.</p>
+  <div class="callout blue"><strong>Scope:</strong> this RPC only. Read from the code in <code>pricing/src/main/scala/com/bigcommerce/catalog/pricing</code> (<code>CartPricingImpl</code>, <code>CartPricingService</code>, <code>CartCatalogServiceClient</code>, <code>PriceResolutionService</code>, <code>CartPricingGrpcConversions</code>, <code>CartBulkQuantities</code>), on <code>origin/master</code> as of 19 Nov 2026. The proto is bcapp's vendored copy (<code>bc-interfaces-php</code>, 6 Nov 2026). Bcapp's side is in <a href="../../Understand-Client-Side/index.html#cart">Understand Client Side, section 5</a>. Not run against a store. Catalog's own logic is in the catalog service, which I did not read. The estimate RPC is on <a href="../ListEstimatedTaxProductPrices/index.html">its own page</a>; this page links to it where the two share code.</div>
+
+  <nav class="toc"><div class="title">On this page</div><ol>
+    <li><a href="#purpose">Purpose</a></li>
+    <li><a href="#flow">The flow</a></li>
+    <li><a href="#request">Request fields</a></li>
+    <li><a href="#base">Mode, price lists and base prices</a></li>
+    <li><a href="#bulk">The bulk tier</a></li>
+    <li><a href="#adjust">Adjusting the price</a></li>
+    <li><a href="#response">Response fields</a></li>
+    <li><a href="#null">When a price is null</a></li>
+    <li><a href="#diff">Compared with the estimate RPC</a></li>
+    <li><a href="#open">Open questions</a></li>
+  </ol></nav>
+
+  <h2 id="purpose">1. Purpose</h2>
+  <p><strong>The question it answers:</strong> what does one unit of each cart line cost, for this line's options, with the quantities in the whole cart, for this customer group, channel and currency?</p>
+  <div class="card-table"><table>
+    <tbody>
+      <tr><td><strong>Who calls it</strong></td><td>bcapp, from <code>CartPricingServiceClient::getCartPricing</code>, called by <code>PriceAssignmentService::hydrate</code> when the cart projection is built. It is used only when the experiments <code>PROJECT-5992.Feature_price_lists_tax_inclusive_exclusive</code> and <code>PROJECT-8948.hydrate_cart_prices_from_pricing_service</code> are both on. Other callers: none found, not searched exhaustively.</td></tr>
+      <tr><td><strong>What it replaces</strong></td><td>bcapp's own cart pricing, where bcapp asked the Pricing service only for the price list and its records and did the maths in PHP. The code comments say the adjustment order is chosen to match how bcapp prices the cart.</td></tr>
+      <tr><td><strong>What comes back</strong></td><td>One price per request line, in request order: <code>price</code>, <code>calculated_price</code>, <code>sale_price</code>, <code>retail_price</code>, <code>map_price</code> and the bulk tier that was applied.</td></tr>
+      <tr><td><strong>What it does not do</strong></td><td>No tax. No rounding. No price ranges or variant lists: it prices the selected variant only. No promotions or coupons, which bcapp applies later. No stock.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">Registered in <code>Boot.scala</code> next to the other RPCs: <code>register(CartPricingGrpc.bindService(cartPricingImpl, PricingAsyncThreadPool))</code>.</p>
+
+  <h2 id="flow">2. The flow</h2>
+  <p class="flow-caption">One request. Loops every 8s.</p>
+  <div class="flow">
+    <div class="node"><span class="tag">Step 0</span><b>Context</b><small>currency projection: exchange rate, decimals</small></div>
+    <div class="node grpc"><span class="tag">Step 1</span><b>Catalog fetch</b><small><code>ListCatalogPrices</code>, then &times; exchange rate</small></div>
+    <div class="node"><span class="tag">Step 2</span><b>Mode and discounts</b><small>PriceList, Discounts or None</small></div>
+    <div class="node"><span class="tag">Step 3</span><b>Resolve base prices</b><small>price list records override catalog</small></div>
+    <div class="node"><span class="tag">Step 4</span><b>Bulk tier</b><small>quantities summed over the cart</small></div>
+    <div class="node"><span class="tag">Step 5</span><b>Adjust</b><small>rules, tier, discount, picklists</small></div>
+    <div class="node http"><span class="tag">Done</span><b>Response</b><small>request order, null if no price</small></div>
+  </div>
+  <p>The steps run one after another (a Scala <code>for</code> comprehension in <code>CartPricingService.buildPrices</code>); none run in parallel.</p>
+  <ol class="steps">
+    <li><strong>Context.</strong> <code>CartPricingImpl</code> turns each request item into a domain item. It looks the currency up in the currency projection by store ID and currency code, which gives the exchange rate and the decimal places, and builds a <code>CartPricingContext</code>.</li>
+    <li><strong>Catalog fetch.</strong> <code>CartCatalogServiceClient</code> makes one <code>ListCatalogPrices</code> call (15 second deadline, read-only database by config) for all items. Per item Catalog returns the selected variant, selected picklists, option set rules, product rules and bulk tiers. Every money value is multiplied by the exchange rate; percentage rules are not. Results are matched back to the request items by product, variant and options. An item Catalog does not return gets empty data. If the whole call fails, every item gets empty data and the RPC still succeeds.</li>
+    <li><strong>Mode and discounts.</strong> The service reads the store's pricing features (one is <code>applyBulkTiersAfterDiscounts</code>) and finds the <a href="#base">pricing mode</a> for the customer group and channel. Only in Discounts mode does it load the customer group discounts, for the product IDs of every line and every picklist.</li>
+    <li><strong>Resolve base prices.</strong> In PriceList mode, price records are read for the selected variants and picklist variants, and they replace the catalog prices of those variants. See <a href="#base">section 4</a>.</li>
+    <li><strong>Bulk tier.</strong> For each line, one tier is chosen using quantities summed over the whole cart. See <a href="#bulk">section 5</a>.</li>
+    <li><strong>Adjust.</strong> The selected variant's calculated price is adjusted by rules, the tier, customer group discounts and picklists, in an order that depends on where the price came from. See <a href="#adjust">section 6</a>.</li>
+    <li><strong>Response.</strong> Each result becomes a <code>CartSelectionPriceWithNullablePricesProto</code>, in request order. A line with no price comes back with all price fields unset.</li>
+  </ol>
+
+  <h2 id="request">3. Request fields</h2>
+  <p><code>GetCartPricingReqProto</code>. The "sent from" column is how bcapp fills it (<code>CartPricingGrpcMapper</code>). Only lines that need a price are sent: custom products, gift certificates and custom-price lines are left out.</p>
+  <div class="card-table f"><table>
+    <colgroup><col style="width:21%"><col style="width:24%"><col style="width:26%"><col style="width:29%"></colgroup>
+    <thead><tr><th>Field</th><th>Sent from (bcapp)</th><th>Used for</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>store_id</code></td><td><span class="src bc">bcapp</span> <code>Account::getHostingId()</code></td><td>Every lookup: currency, catalog, price records, discounts, feature flags.</td><td>Required.</td></tr>
+      <tr><td><code>currency_code</code></td><td><span class="src bc">bcapp</span> the cart's currency, through <code>CurrencyConverter</code></td><td>Exchange rate and decimal places from the currency projection. Also the currency filter when reading price records.</td><td>Catalog values are converted to this currency. Price record values are read in this currency and are not converted.</td></tr>
+      <tr><td><code>customer_group_id</code></td><td><span class="src bc">bcapp</span> <code>Cart::getCustomerGroupId()</code></td><td>Pricing mode, and which customer group discounts apply.</td><td>0 for guests. The proto says clients must provide it.</td></tr>
+      <tr><td><code>channel_id</code></td><td><span class="src bc">bcapp</span> <code>Cart::getChannelId()</code></td><td>Sent to Catalog as the channel scope, and used to find the price list assignment.</td><td>Must be 1 or higher. What Catalog does with it is an open question on the <a href="../index.html#open">overview page</a>.</td></tr>
+      <tr class="grp"><td colspan="4">request_items[] (one per cart line)</td></tr>
+      <tr><td><code>cart_item_id</code></td><td><span class="src bc">bcapp</span> <code>CartItem::getId()</code></td><td>Echoed back so bcapp can match a price to its line.</td><td>Nothing in the service reads it as a value.</td></tr>
+      <tr><td><code>product_id</code></td><td><span class="src bc">bcapp</span> <code>CartItem::getProductId()</code></td><td>Catalog request. Grouping of quantities per product for the bulk tier. Discount lookup.</td><td></td></tr>
+      <tr><td><code>variant_id</code></td><td><span class="src bc">bcapp</span> <code>CartItem::getVariantId()</code>, left unset when null</td><td>Catalog request. Matching Catalog's answer back to the line.</td><td>The variant that gets priced is the one Catalog returns as selected, which can differ from this field when options resolve it.</td></tr>
+      <tr><td><code>quantity</code></td><td><span class="src bc">bcapp</span> <code>CartItem::getQuantity()</code></td><td>Choosing the bulk tier, after summing with other lines of the same variant or product.</td><td>It is never multiplied into a price. The response is a unit price.</td></tr>
+      <tr><td><code>selected_options[]</code></td><td><span class="src bc">bcapp</span> <code>CartItem::getAttributesConditions()</code>, as option ID and value ID</td><td>Catalog request, so Catalog can resolve the variant, picklists and rules.</td><td>Options with a value ID of 0 are unselected picklists and are removed before the Catalog call. Matching back uses the filtered list.</td></tr>
+      <tr><td><code>product_attribute_combination_id</code></td><td><span class="src bc">bcapp</span> <code>CartItem::getProductAttributeCombinationId()</code>, left unset when null</td><td>Nothing.</td><td>It is read into the domain item but no code in the service uses it.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="base">4. Mode, price lists and base prices</h2>
+  <p><strong>Pricing mode</strong> is found by <code>AlternativePricingProvider.findAlternativePricingForRequest</code> from the customer group and channel, the same way as for the estimate RPC: see <a href="../ListEstimatedTaxProductPrices/index.html#mode">which pricing mode applies</a>. The result is PriceList (with a price list ID), Discounts, or None. The service also learns whether the list's prices are entered inclusive or exclusive of tax.</p>
+  <div class="card-table"><table>
+    <thead><tr><th>Mode</th><th>What the cart path does</th></tr></thead>
+    <tbody>
+      <tr><td><strong>PriceList</strong></td><td>Reads active price records for the selected variants and picklist variants of all lines, in the cart currency, with their bulk tiers. Stale reads are allowed. If the store uses layered price lists, the read returns the layered result. If the read fails, the error is dropped and the records are treated as empty.</td></tr>
+      <tr><td><strong>Discounts</strong></td><td>Loads the customer group discounts for every line's product and every picklist product. No price records.</td></tr>
+      <tr><td><strong>None</strong></td><td>Catalog prices only.</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Resolving a variant's price.</strong> This runs for the selected variant and for each picklist variant (<code>resolveVariantPrice</code>, with null prices allowed). <em>Inc/ex price list</em> means the list's prices are entered inclusive or exclusive and the store flag <code>priceListPricesInclusiveExclusiveTax</code> is on.</p>
+  <div class="card-table"><table>
+    <thead><tr><th>Case</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>The variant has a price record</td><td><span class="src pl">Price list</span> Every value comes from the record: <code>price</code>, <code>calculated_price</code>, <code>sale_price</code>, <code>retail_price</code>, <code>map_price</code>. Source is PRICE_LIST.</td></tr>
+      <tr class="hl"><td>No record, and an inc/ex price list</td><td>All five prices are null. Source is PRICE_LIST. The line ends up with no price.</td></tr>
+      <tr><td>No record, any other case</td><td><span class="src cat">Catalog</span> The catalog variant prices, converted by the exchange rate. Source is CATALOG.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="bulk">5. The bulk tier</h2>
+  <p>The tier is chosen with quantities summed over <strong>all lines in the request</strong> (<code>CartBulkQuantities</code>), not each line's own quantity. A tier matches when <code>quantityMin &le; quantity</code> and the quantity is within <code>quantityMax</code>, or the tier has no max.</p>
+  <div class="card-table"><table>
+    <thead><tr><th>Selected variant</th><th>Tiers used</th><th>Quantity matched on</th></tr></thead>
+    <tbody>
+      <tr><td>Has a price record</td><td><span class="src pl">Price list</span> the record's tiers</td><td>The variant's total over the cart</td></tr>
+      <tr><td>From a price list, no record (inc/ex)</td><td>None</td><td>Not applicable</td></tr>
+      <tr><td>Any other variant</td><td><span class="src cat">Catalog</span> the product's catalog tiers</td><td>The product's total over the cart, <strong>minus</strong> units priced from price records</td></tr>
+      <tr><td>No selected variant</td><td>None</td><td>Not applicable</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Example.</strong> Product P has catalog tiers. The cart has variant A &times; 2, which has a price record, and variant B &times; 3, which has none. A uses its record tiers with quantity 2. B uses P's catalog tiers with quantity (2 + 3) &minus; 2 = 3, because A's units were priced from records and do not count towards the catalog tier.</p>
+
+  <h2 id="adjust">6. Adjusting the price</h2>
+  <p>Each line starts from the selected variant's <code>calculated_price</code>: the record's, or catalog's with the sale price already applied. What happens next depends on the source. Pick one:</p>
+  <div class="switcher" id="sw-adj">
+    <div class="label">Where the price came from</div>
+    <div class="seg" id="adj-seg" role="group" aria-label="Price source"></div>
+    <ol class="steps" id="adj-steps"></ol>
+    <p class="small muted" id="adj-note"></p>
+  </div>
+  <ul>
+    <li><strong>Rules</strong> are the option set rules, then the product rules. Each is a percentage, a relative amount or a fixed price.</li>
+    <li><strong>Customer group discount</strong> uses the same selection as the estimate RPC: see <a href="../ListEstimatedTaxProductPrices/index.html#adjust">what changes <code>calculated_price</code></a>. It is applied to the product's price and to each picklist's own price.</li>
+    <li><strong>Picklist prices</strong> are added to the result. If any picklist price is null, the whole price is null.</li>
+    <li><strong>Floor.</strong> The result is floored at 0. A catalog bulk tier is floored on its own as well.</li>
+    <li><strong>Not adjusted:</strong> <code>price</code>, <code>sale_price</code>, <code>retail_price</code>, <code>map_price</code>. Only <code>calculated_price</code> changes.</li>
+    <li><strong>No rounding.</strong> I found no rounding in the cart path. The exchange rate multiplication and the adjustments keep full decimal precision, and the value is sent as units and nanos.</li>
+  </ul>
+
+  <h2 id="response">7. Response fields</h2>
+  <p><code>GetCartPricingRespProto</code>.</p>
+  <div class="card-table f"><table>
+    <colgroup><col style="width:27%"><col style="width:24%"><col style="width:20%"><col style="width:29%"></colgroup>
+    <thead><tr><th>Field</th><th>Starts from</th><th>Computation</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>selection_prices[]</code></td><td>One result per request item.</td><td>Built by mapping the request items in order, so the order is the request order.</td><td>Never shorter than the request.</td></tr>
+      <tr class="grp"><td colspan="4">Each selection_prices entry</td></tr>
+      <tr><td><code>cart_item_id</code></td><td>The request item's <code>cart_item_id</code></td><td>Copied.</td><td></td></tr>
+      <tr><td><code>selection_price</code></td><td>The line's <code>CartSelectionPrice</code></td><td>Always set, even when there is no price. A line with no price has an empty message.</td><td>The proto comment says "unset if a price could not be determined". In this code the message is set and its fields are unset. bcapp treats an unset <code>price</code> as no price.</td></tr>
+      <tr><td><code>selection_price.price</code></td><td><span class="src pl">Price list</span> the record's <code>price</code>, or <span class="src cat">Catalog</span> the variant's catalog <code>price</code> &times; exchange rate</td><td>None.</td><td>Unset when the variant's price is null.</td></tr>
+      <tr><td><code>selection_price.calculated_price</code></td><td><span class="src pl">Price list</span> or <span class="src cat">Catalog</span> the variant's <code>calculated_price</code></td><td><span class="src calc">Computed</span> Adjusted as in <a href="#adjust">section 6</a>.</td><td>Unset when the result is null.</td></tr>
+      <tr><td><code>selection_price.sale_price</code>, <code>retail_price</code>, <code>map_price</code></td><td><span class="src pl">Price list</span> the record's, or <span class="src cat">Catalog</span> the variant's &times; exchange rate</td><td>None.</td><td>Optional. <code>map_price</code> is the minimum advertised price.</td></tr>
+      <tr><td><code>selection_price.applied_bulk_tier_pricing</code></td><td>The tier chosen in <a href="#bulk">section 5</a></td><td>None. Its amount is already used inside <code>calculated_price</code>.</td><td>Fields: <code>quantity_min</code>, <code>quantity_max</code> (optional), type (price, percent or fixed), <code>amount</code>. Catalog tier amounts for price and fixed types are &times; exchange rate. Record tiers are used as stored.</td></tr>
+      <tr class="hl"><td><code>prices_entered_tax_inclusive</code></td><td>Nothing. The service does not set it.</td><td>None.</td><td>The proto has this field (field 2), and bcapp reads it, but <code>CartPricingImpl</code> builds the response with <code>selectionPrices</code> only, so it is always the default <code>false</code>. See <a href="#open">open questions</a>.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="null">8. When a price is null</h2>
+  <p>A null price means all price fields are unset for that line. bcapp reads it as "no price" and removes the line from the cart.</p>
+  <div class="card-table"><table>
+    <thead><tr><th>Cause</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td>Catalog returned nothing for the line, or the whole <code>ListCatalogPrices</code> call failed</td><td>No selected variant, so the line is null. A Catalog failure does not fail the RPC: <em>every</em> line comes back null.</td></tr>
+      <tr><td>The selected variant has no price or no calculated price</td><td>For example an inc/ex price list with no record for the variant.</td></tr>
+      <tr><td>A picklist price is null after adjusting</td><td>For example a picklist product with no record on an inc/ex list.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">Other failures, such as the currency lookup, surface as RPC errors through <code>ContextualExceptionHandler</code>. I did not test any failure path.</p>
+
+  <h2 id="diff">9. Compared with the estimate RPC</h2>
+  <div class="card-table"><table>
+    <thead><tr><th></th><th>GetCartPricing</th><th>ListEstimatedTaxProductPrices</th></tr></thead>
+    <tbody>
+      <tr><td>Prices per item</td><td>One unit price for the selected variant</td><td>Price, ranges, retail range, saved, for the base, selected or cheapest variant (five branches)</td></tr>
+      <tr><td>Quantity</td><td>Used, summed over the cart, to pick a tier that <strong>is applied</strong></td><td>No quantity. Tiers are returned as data and never change the price</td></tr>
+      <tr><td>Tax</td><td>None</td><td>Inc, ex and as-entered amounts through the Tax RPC</td></tr>
+      <tr><td>Rounding</td><td>None found</td><td>Rounded to the currency's decimals before tax</td></tr>
+      <tr><td>Null prices</td><td>Always allowed. Null means no price</td><td>Only with <code>enable_null_prices_in_response</code></td></tr>
+      <tr><td>Adjustment order</td><td>Depends on the source: price list or catalog (<a href="#adjust">section 6</a>)</td><td>Rules, product rules, discount, picklists, floor</td></tr>
+      <tr><td>Shared code</td><td colspan="2">Catalog data, pricing mode, price record lookup and discount selection are shared with the estimate path (<code>PriceResolutionService</code>, <code>AlternativePricingProvider</code>, <code>PricingDiscountService</code>).</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="open">10. Open questions</h2>
+  <div class="card-table"><table>
+    <thead><tr><th>Question</th><th>What is known</th><th>How to answer it</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td><strong>Is <code>prices_entered_tax_inclusive</code> ever set?</strong></td><td>Not in <code>CartPricingImpl</code> on <code>origin/master</code>. bcapp reads it to decide whether the cart's prices are tax inclusive. With the field always false, a price list entered inclusive would be treated as exclusive. The bcapp code warns not to enable the flag before cart pricing phase 2 (PROJECT-8947).</td><td>Check whether phase 2 adds it, and whether the stub version the service builds with has the field</td></tr>
+      <tr><td><strong>Should the cart path round?</strong></td><td>No rounding found in the service. bcapp rounds each value when it writes the Checkout API response, and with the flag on it does not round at hydration.</td><td>Compare a cart's hydrated prices with the flag on and off</td></tr>
+      <tr><td><strong>Does a Catalog failure really remove every cart line?</strong></td><td>By the code, every line comes back null, and bcapp removes lines with no price.</td><td>Test with Catalog unavailable</td></tr>
+      <tr><td><strong>Do the flag-on and flag-off paths agree?</strong></td><td>The service says its order matches bcapp's. Not compared.</td><td>Run the same carts through both and diff</td></tr>
+      <tr><td><strong>Who else calls it?</strong></td><td>Only bcapp's cart projection found.</td><td>Search the other services for a <code>CartPricing</code> client</td></tr>
+    </tbody>
+  </table></div>
+
+  <footer><a href="../index.html">&larr; back to Understand Pricing Service</a><a href="../../index.html">Pricing Learning</a></footer>
+</main>
+<script>
+(function () {
+  var O = {
+    pl: {
+      label: "Price list record",
+      steps: [
+        "Start: the record's <code>calculated_price</code>",
+        "Apply the <b>bulk tier</b> (from the record, matched on the variant's cart quantity)",
+        "Apply option set rules, then product rules",
+        "Add picklist prices (null if any is null)",
+        "Floor at 0"
+      ],
+      note: "Price list prices never get customer group discounts. The tier goes first and is not floored on its own."
+    },
+    cat: {
+      label: "Catalog, no discounts",
+      steps: [
+        "Start: catalog <code>calculated_price</code> &times; exchange rate",
+        "Apply option set rules, then product rules",
+        "Apply the <b>bulk tier</b> (catalog tier, floored at 0)",
+        "Add picklist prices (null if any is null)",
+        "Floor at 0"
+      ],
+      note: "Used in None mode, and in Discounts mode when there are no discounts for these products."
+    },
+    before: {
+      label: "Catalog, discounts, tier before",
+      steps: [
+        "Start: catalog <code>calculated_price</code> &times; exchange rate",
+        "Apply option set rules, then product rules",
+        "Apply the <b>bulk tier</b> (floored at 0)",
+        "Apply the <b>customer group discount</b> to the product price and to each picklist's own price",
+        "Add the discounted picklist prices, floor at 0"
+      ],
+      note: "Discounts mode, with the store setting <code>applyBulkTiersAfterDiscounts</code> off."
+    },
+    after: {
+      label: "Catalog, discounts, tier after",
+      steps: [
+        "Start: catalog <code>calculated_price</code> &times; exchange rate",
+        "Apply option set rules, then product rules",
+        "Apply the <b>customer group discount</b> to the product price and to each picklist's own price",
+        "Apply the <b>bulk tier</b> to the discounted product price (floored at 0)",
+        "Add the discounted picklist prices, floor at 0"
+      ],
+      note: "Discounts mode, with <code>applyBulkTiersAfterDiscounts</code> on (the store feature <code>Feature_ApplyBulkDiscountToOriginalPrice</code>)."
+    }
+  };
+  var seg = document.getElementById("adj-seg"), list = document.getElementById("adj-steps"), note = document.getElementById("adj-note");
+  function show(k) {
+    list.innerHTML = O[k].steps.map(function (s) { return "<li>" + s + "</li>"; }).join("");
+    note.innerHTML = O[k].note;
+    Array.prototype.forEach.call(seg.children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.k === k)); });
+  }
+  Object.keys(O).forEach(function (k) {
+    var b = document.createElement("button");
+    b.type = "button"; b.dataset.k = k; b.textContent = O[k].label; b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", function () { show(k); });
+    seg.appendChild(b);
+  });
+  show("pl");
+})();
+</script>
+</body>
+</html>
