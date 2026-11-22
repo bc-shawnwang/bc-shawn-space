@@ -290,8 +290,20 @@ svg.sv{width:100%;height:auto;display:block;min-width:700px;}
   </ol>
 
   <h3>Watch one request</h3>
-  <p>A cart with three lines goes through the service. Press <strong>Play</strong>, or <strong>Step</strong> to move one message at a time. The box under the diagram says what the data looks like at that point. The example: lines L1 (variant 321 &times; 2) and L2 (variant 322 &times; 3) are the same product 10, and L3 is a product Catalog does not return. The group has a price list with a record for variant 321 only.</p>
+  <p>The same cart goes through the service in every mode. Each line is a different cart item, with its own <code>cart_item_id</code>.</p>
+  <div class="card-table"><table>
+    <thead><tr><th>Cart Line Items</th><th>Product</th><th>Variant</th><th>Quantity</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Item A</strong></td><td>10 (T-shirt)</td><td>321</td><td>2</td><td>Has a price record in the price list modes.</td></tr>
+      <tr><td><strong>Item B</strong></td><td>10 (T-shirt)</td><td>322</td><td>3</td><td>Another variant of the same T-shirt. Has no price record.</td></tr>
+      <tr><td><strong>Item C</strong></td><td>99</td><td>none</td><td>1</td><td>A product Catalog does not return, for example a deleted one.</td></tr>
+    </tbody>
+  </table></div>
+  <p>Pick the <strong>pricing mode</strong> the customer group falls into, then press <strong>Play</strong>, or <strong>Step</strong> to move one message at a time. The box under the diagram says what the data looks like at that point.</p>
   <div class="wg" id="sq-wg">
+    <div class="label">Pricing mode</div>
+    <div class="seg" id="sq-mode" role="group" aria-label="Pricing mode"></div>
+    <p class="small muted" id="sq-desc"></p>
     <div class="bar">
       <button class="b primary" id="sq-play" type="button">&#9654; Play</button>
       <button class="b" id="sq-step" type="button">Step</button>
@@ -354,14 +366,14 @@ svg.sv{width:100%;height:auto;display:block;min-width:700px;}
       <tr><td>No selected variant</td><td>None</td><td>Not applicable</td></tr>
     </tbody>
   </table></div>
-  <p><strong>Example.</strong> Product P has catalog tiers. The cart has variant A &times; 2, which has a price record, and variant B &times; 3, which has none. A uses its record tiers with quantity 2. B uses P's catalog tiers with quantity (2 + 3) &minus; 2 = 3, because A's units were priced from records and do not count towards the catalog tier.</p>
+  <p><strong>Example.</strong> A T-shirt (product 10) has catalog tiers. The cart has <strong>Item A</strong> (variant 321) &times; 2, which has a price record, and <strong>Item B</strong> (variant 322) &times; 3, which has none. Item A uses its record tiers with quantity 2. Item B uses the T-shirt's catalog tiers with quantity (2 + 3) &minus; 2 = 3, because Item A's units were priced from records and do not count towards the catalog tier. Try it below.</p>
 
   <div class="wg" id="bulk-wg">
-    <div class="label">Try it: the same product on two lines</div>
+    <div class="label">Try it: two variants of the same T-shirt</div>
     <div class="bk-ctl">
-      <span class="num">Variant A quantity <button type="button" data-d="a-1" aria-label="Decrease A">&minus;</button><output id="bk-a">2</output><button type="button" data-d="a+1" aria-label="Increase A">+</button></span>
-      <span class="num">Variant B quantity <button type="button" data-d="b-1" aria-label="Decrease B">&minus;</button><output id="bk-b">3</output><button type="button" data-d="b+1" aria-label="Increase B">+</button></span>
-      <label class="chk"><input type="checkbox" id="bk-rec" checked> A has a price record</label>
+      <span class="num">Item A quantity <button type="button" data-d="a-1" aria-label="Decrease Item A">&minus;</button><output id="bk-a">2</output><button type="button" data-d="a+1" aria-label="Increase Item A">+</button></span>
+      <span class="num">Item B quantity <button type="button" data-d="b-1" aria-label="Decrease Item B">&minus;</button><output id="bk-b">3</output><button type="button" data-d="b+1" aria-label="Increase Item B">+</button></span>
+      <label class="chk"><input type="checkbox" id="bk-rec" checked> Item A has a price record</label>
     </div>
     <div class="bk-out" id="bk-out"></div>
   </div>
@@ -457,53 +469,106 @@ svg.sv{width:100%;height:auto;display:block;min-width:700px;}
   }
 
   // ---------------------------------------------------------------- 1. sequence
-  var P = [["bcapp", "CartPricingServiceClient"], ["Pricing RPC", "CartPricingService"], ["Catalog RPC", "ListCatalogPrices"], ["Price records", "price lists store"]];
-  var X = [110, 340, 570, 780];
-  var M = [
-    { k: "call", a: 0, b: 1, t: "GetCartPricing", pay: "<b>Request.</b> <code>store_id</code>, <code>currency_code</code> EUR, <code>customer_group_id</code> 5, <code>channel_id</code> 1, and three items: <code>L1</code> product 10, variant 321, qty 2. <code>L2</code> product 10, variant 322, qty 3. <code>L3</code> product 99, qty 1." },
-    { k: "self", a: 1, t: "currency projection:\nrate 0.8, 2 decimals", pay: "<b>Context.</b> The service looks the currency up by store and code. It gets an exchange rate of 0.8 and 2 decimal places, and builds the <code>CartPricingContext</code>." },
-    { k: "call", a: 1, b: 2, t: "ListCatalogPrices (3 items)", pay: "<b>Catalog call.</b> One call for all items, with a 15 second deadline. Options with a value of 0 (unselected picklists) are removed first." },
-    { k: "ret", a: 2, b: 1, t: "variants, rules, tiers (× 0.8)", pay: "<b>Catalog answer.</b> L1 and L2 come back with their selected variant, rules and bulk tiers, every amount multiplied by 0.8. <code>L3</code> is not returned, so it gets empty data. If the whole call had failed, all three would be empty." },
-    { k: "self", a: 1, t: "pricing mode: PriceList #7", pay: "<b>Mode.</b> Group 5 has a price list, so the mode is PriceList with list ID 7. Discounts are not loaded in this mode." },
-    { k: "call", a: 1, b: 3, t: "records for variants 321, 322", pay: "<b>Price records.</b> The service asks for active records of list 7 in EUR for the selected variants, with their bulk tiers. Stale reads are allowed." },
-    { k: "ret", a: 3, b: 1, t: "record for 321 only", pay: "<b>Records answer.</b> Variant 321 has a record: L1 takes every price from it. Variant 322 has none, and this is not an inc/ex list, so L2 keeps its catalog prices." },
-    { k: "self", a: 1, t: "bulk tier + adjust per line", pay: "<b>Tier and adjustments.</b> Quantities are summed over the cart. L1 uses its record's tiers with quantity 2. L2 uses product 10's catalog tiers with (2 + 3) − 2 = 3. Each line then gets rules, tier, discount and picklists in the order for its source." },
-    { k: "ret", a: 1, b: 0, t: "selection_prices[3]", pay: "<b>Response.</b> Three entries in request order. L1 and L2 have prices. <code>L3</code> has an empty <code>selection_price</code>, which bcapp reads as no price and removes from the cart. <code>prices_entered_tax_inclusive</code> is not set." }
-  ];
+  var BC = ["bcapp", "CartPricingServiceClient"], PR = ["Pricing RPC", "CartPricingService"], CT = ["Catalog RPC", "ListCatalogPrices"];
+  function head() {
+    return [
+      { k: "call", a: 0, b: 1, t: "GetCartPricing", pay: "<b>Request.</b> <code>store_id</code>, <code>currency_code</code> EUR, <code>customer_group_id</code> 5, <code>channel_id</code> 1, and three cart lines, each with its own <code>cart_item_id</code>: <b>Item A</b> (product 10, variant 321, qty 2), <b>Item B</b> (product 10, variant 322, qty 3) and <b>Item C</b> (product 99, qty 1)." },
+      { k: "self", a: 1, t: "currency projection:\nrate 0.8, 2 decimals", pay: "<b>Context.</b> The service looks the currency up by store and code. It gets an exchange rate of 0.8 and 2 decimal places, and builds the <code>CartPricingContext</code>." },
+      { k: "call", a: 1, b: 2, t: "ListCatalogPrices (3 items)", pay: "<b>Catalog call.</b> One call for all items, with a 15 second deadline. Options with a value of 0 (unselected picklists) are removed first. This happens in every mode." },
+      { k: "ret", a: 2, b: 1, t: "variants, rules, tiers (× 0.8)", pay: "<b>Catalog answer.</b> Item A and Item B come back with their selected variant, rules and bulk tiers, every amount multiplied by 0.8. Item C is not returned, so it gets empty data. If the whole call had failed, all three would be empty." }
+    ];
+  }
+  var RESP_TAIL = "Three entries in request order. ";
+  var MODES = {
+    pl: {
+      label: "PriceList",
+      desc: "Group 5 has price list 7, with a record for variant 321 only. Prices are not entered inclusive or exclusive of tax on this list.",
+      parts: [BC, PR, CT, ["Price records", "price lists store"]],
+      msgs: head().concat([
+        { k: "self", a: 1, t: "pricing mode: PriceList #7", pay: "<b>Mode.</b> Group 5 has a price list, so the mode is PriceList with list ID 7. Discounts are not loaded in this mode." },
+        { k: "call", a: 1, b: 3, t: "records for variants 321, 322", pay: "<b>Price records.</b> The service asks for active records of list 7 in EUR for the selected variants, with their bulk tiers. Stale reads are allowed." },
+        { k: "ret", a: 3, b: 1, t: "record for 321 only", pay: "<b>Records answer.</b> Variant 321 has a record: Item A takes every price from it. Variant 322 has none, and this is not an inc/ex list, so Item B keeps its catalog prices." },
+        { k: "self", a: 1, t: "bulk tier + adjust per line", pay: "<b>Tier and adjustments.</b> Quantities are summed over the cart. Item A uses its record's tiers with quantity 2. Item B uses product 10's catalog tiers with (2 + 3) − 2 = 3. Each line then gets the price list order (tier, rules, picklists) or the catalog order (rules, tier, picklists), by its source." },
+        { k: "ret", a: 1, b: 0, t: "selection_prices[3]", pay: "<b>Response.</b> " + RESP_TAIL + "Item A and Item B have prices. Item C has an empty <code>selection_price</code>, which bcapp reads as no price and removes from the cart." }
+      ])
+    },
+    plx: {
+      label: "PriceList, inc/ex",
+      desc: "Same price list 7, but its prices are entered exclusive of tax and the store flag <code>priceListPricesInclusiveExclusiveTax</code> is on. A variant with no record gets no price instead of a catalog price.",
+      parts: [BC, PR, CT, ["Price records", "price lists store"]],
+      msgs: head().concat([
+        { k: "self", a: 1, t: "PriceList #7, entered ex tax", pay: "<b>Mode.</b> PriceList with list ID 7. The list says its prices are entered exclusive of tax, and the inc/ex flag is on, so this is an inc/ex price list." },
+        { k: "call", a: 1, b: 3, t: "records for variants 321, 322", pay: "<b>Price records.</b> Same request as the plain PriceList case." },
+        { k: "ret", a: 3, b: 1, t: "record for 321 only", pay: "<b>Records answer.</b> Variant 321 has a record. Variant 322 has none." },
+        { k: "self", a: 1, t: "Item B: no record, price null", pay: "<b>No record on an inc/ex list.</b> Item B's five prices become null with source PRICE_LIST. It does <em>not</em> fall back to the catalog price. Item A is tiered and adjusted as usual with its record tiers." },
+        { k: "ret", a: 1, b: 0, t: "selection_prices[3]", pay: "<b>Response.</b> " + RESP_TAIL + "Item A has a price. Item B and Item C are empty, so bcapp removes both lines from the cart." }
+      ])
+    },
+    disc: {
+      label: "Discounts",
+      desc: "Group 5 has customer group discounts and no price list. Product 10 has a 10% discount in this example.",
+      parts: [BC, PR, CT, ["Discounts", "customer group discounts"]],
+      msgs: head().concat([
+        { k: "self", a: 1, t: "pricing mode: Discounts", pay: "<b>Mode.</b> Group 5 has customer group discounts and no price list, so the mode is Discounts. No price records are read." },
+        { k: "call", a: 1, b: 3, t: "discounts for products 10, 99", pay: "<b>Discounts.</b> The service loads the group's discounts for the product ID of every line, plus the product IDs of any selected picklists." },
+        { k: "ret", a: 3, b: 1, t: "product 10: 10% off", pay: "<b>Discounts answer.</b> One discount applies, to product 10. The same selection rules as the estimate RPC are used: the product's discount wins, then the lowest category discount, then the sitewide one." },
+        { k: "self", a: 1, t: "bulk tier + adjust per line", pay: "<b>Tier and adjustments.</b> There are no price records, so Item A and Item B both use product 10's catalog tiers with quantity 2 + 3 = 5. Each line gets rules, then the customer group discount and the tier in the order set by <code>applyBulkTiersAfterDiscounts</code>, then picklists." },
+        { k: "ret", a: 1, b: 0, t: "selection_prices[3]", pay: "<b>Response.</b> " + RESP_TAIL + "Item A and Item B have discounted prices. Item C is empty and removed by bcapp." }
+      ])
+    },
+    none: {
+      label: "None",
+      desc: "Group 5 has no price list and no discounts. Prices are catalog prices only, so there is nothing to look up after the Catalog call.",
+      parts: [BC, PR, CT],
+      msgs: head().concat([
+        { k: "self", a: 1, t: "pricing mode: None", pay: "<b>Mode.</b> No price list and no customer group discounts apply, so the mode is None. The service reads neither price records nor discounts." },
+        { k: "self", a: 1, t: "bulk tier + adjust per line", pay: "<b>Tier and adjustments.</b> Item A and Item B both use product 10's catalog tiers with quantity 2 + 3 = 5. Each line gets rules, then the tier (floored at 0), then picklists." },
+        { k: "ret", a: 1, b: 0, t: "selection_prices[3]", pay: "<b>Response.</b> " + RESP_TAIL + "Item A and Item B have catalog-based prices. Item C is empty and removed by bcapp." }
+      ])
+    }
+  };
   var svg = document.getElementById("sq-svg");
   if (svg) {
-    var ROW = 52, TOP = 70, H = TOP + ROW * M.length + 20;
-    svg.setAttribute("viewBox", "0 0 880 " + H);
-    var defs = el("defs", {}, svg);
-    var mk = el("marker", { id: "sv-ah", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, defs);
-    el("path", { d: "M0,0 L10,5 L0,10 z", "class": "sv-head" }, mk);
-    P.forEach(function (p, i) {
-      el("line", { "class": "sv-life", x1: X[i], y1: 50, x2: X[i], y2: H - 6 }, svg);
-      el("rect", { "class": "sv-box", x: X[i] - 90, y: 4, width: 180, height: 44, rx: 7 }, svg);
-      var n = el("text", { "class": "sv-name", x: X[i], y: 23, "text-anchor": "middle" }, svg); n.textContent = p[0];
-      var s = el("text", { "class": "sv-sub", x: X[i], y: 39, "text-anchor": "middle" }, svg); s.textContent = p[1];
-    });
-    var groups = M.map(function (m, i) {
-      var g = el("g", { "class": "sv-msg" }, svg);
-      var y = TOP + ROW * i + 20;
-      var num = el("text", { "class": "sv-num", x: 6, y: y + 4 }, g); num.textContent = String(i + 1);
-      if (m.k === "self") {
-        var lines = m.t.split("\n"), x = X[m.a] + 10;
-        el("rect", { "class": "sv-note", x: x, y: y - 16, width: 230, height: 14 * lines.length + 12, rx: 5 }, g);
-        lines.forEach(function (ln, j) { var t = el("text", { "class": "sv-t", x: x + 8, y: y + 1 + 14 * j }, g); t.textContent = ln; });
-      } else {
-        var x1 = X[m.a], x2 = X[m.b], dir = x2 > x1 ? -3 : 3;
-        var ln = el("line", { "class": m.k === "ret" ? "sv-ret" : "sv-call", x1: x1, y1: y, x2: x2 + dir, y2: y, "marker-end": "url(#sv-ah)" }, g);
-        ln.style.setProperty("--len", Math.abs(x2 - x1));
-        var t = el("text", { "class": "sv-t", x: (x1 + x2) / 2, y: y - 7, "text-anchor": "middle" }, g); t.textContent = m.t;
-      }
-      return g;
-    });
-    var dot = el("circle", { "class": "sv-dot", r: 5, cx: -20, cy: -20 }, svg);
+    var ROW = 52, TOP = 70, W = 880;
     var pay = document.getElementById("sq-pay"), count = document.getElementById("sq-count"), playBtn = document.getElementById("sq-play");
-    var cur = -1, timer = null;
+    var descEl = document.getElementById("sq-desc"), modeSeg = document.getElementById("sq-mode");
+    var mode = "pl", cur = -1, timer = null, groups = [], dot = null, X = [], D = MODES.pl;
+    function buildSeq() {
+      D = MODES[mode];
+      X = D.parts.map(function (p, i) { return Math.round(W / D.parts.length * (i + 0.5)); });
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      var H = TOP + ROW * D.msgs.length + 20;
+      svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+      var defs = el("defs", {}, svg);
+      var mk = el("marker", { id: "sv-ah", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, defs);
+      el("path", { d: "M0,0 L10,5 L0,10 z", "class": "sv-head" }, mk);
+      D.parts.forEach(function (p, i) {
+        el("line", { "class": "sv-life", x1: X[i], y1: 50, x2: X[i], y2: H - 6 }, svg);
+        el("rect", { "class": "sv-box", x: X[i] - 90, y: 4, width: 180, height: 44, rx: 7 }, svg);
+        var n = el("text", { "class": "sv-name", x: X[i], y: 23, "text-anchor": "middle" }, svg); n.textContent = p[0];
+        var s2 = el("text", { "class": "sv-sub", x: X[i], y: 39, "text-anchor": "middle" }, svg); s2.textContent = p[1];
+      });
+      groups = D.msgs.map(function (m, i) {
+        var g = el("g", { "class": "sv-msg" }, svg);
+        var y = TOP + ROW * i + 20;
+        var num = el("text", { "class": "sv-num", x: 6, y: y + 4 }, g); num.textContent = String(i + 1);
+        if (m.k === "self") {
+          var lines = m.t.split("\n"), x = X[m.a] + 10;
+          el("rect", { "class": "sv-note", x: x, y: y - 16, width: 230, height: 14 * lines.length + 12, rx: 5 }, g);
+          lines.forEach(function (ln, j) { var t = el("text", { "class": "sv-t", x: x + 8, y: y + 1 + 14 * j }, g); t.textContent = ln; });
+        } else {
+          var x1 = X[m.a], x2 = X[m.b], dir = x2 > x1 ? -3 : 3;
+          var ln2 = el("line", { "class": m.k === "ret" ? "sv-ret" : "sv-call", x1: x1, y1: y, x2: x2 + dir, y2: y, "marker-end": "url(#sv-ah)" }, g);
+          ln2.style.setProperty("--len", Math.abs(x2 - x1));
+          var t2 = el("text", { "class": "sv-t", x: (x1 + x2) / 2, y: y - 7, "text-anchor": "middle" }, g); t2.textContent = m.t;
+        }
+        return g;
+      });
+      dot = el("circle", { "class": "sv-dot", r: 5, cx: -20, cy: -20 }, svg);
+      descEl.innerHTML = D.desc;
+    }
     function flyDot(i) {
-      var m = M[i];
+      var m = D.msgs[i];
       if (reduced || m.k === "self") { dot.setAttribute("cx", -20); return; }
       var y = TOP + ROW * i + 20, x1 = X[m.a], x2 = X[m.b];
       dot.setAttribute("cy", y);
@@ -513,22 +578,32 @@ svg.sv{width:100%;height:auto;display:block;min-width:700px;}
     function show(k) {
       cur = k;
       groups.forEach(function (g, i) { g.classList.toggle("on", i <= k); g.classList.toggle("cur", i === k); });
-      pay.innerHTML = k < 0 ? "Press <b>Play</b> or <b>Step</b> to start." : M[k].pay;
-      count.textContent = k < 0 ? "" : "Message " + (k + 1) + " of " + M.length;
+      pay.innerHTML = k < 0 ? "Press <b>Play</b> or <b>Step</b> to start." : D.msgs[k].pay;
+      count.textContent = k < 0 ? "" : "Message " + (k + 1) + " of " + D.msgs.length;
       if (k >= 0) flyDot(k); else dot.setAttribute("cx", -20);
     }
     function stop() { if (timer) { clearInterval(timer); timer = null; } playBtn.innerHTML = "&#9654; Play"; }
     function play() {
       stop();
-      if (cur >= M.length - 1) show(-1);
+      if (cur >= D.msgs.length - 1) show(-1);
       playBtn.innerHTML = "&#10073;&#10073; Pause";
-      timer = setInterval(function () { if (cur >= M.length - 1) { stop(); return; } show(cur + 1); }, 2300);
+      timer = setInterval(function () { if (cur >= D.msgs.length - 1) { stop(); return; } show(cur + 1); }, 2300);
       show(cur + 1);
     }
+    function setMode(k) {
+      stop(); mode = k; buildSeq(); show(-1);
+      Array.prototype.forEach.call(modeSeg.children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.k === k)); });
+    }
+    Object.keys(MODES).forEach(function (k) {
+      var b = document.createElement("button");
+      b.type = "button"; b.dataset.k = k; b.textContent = MODES[k].label; b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", function () { setMode(k); play(); });
+      modeSeg.appendChild(b);
+    });
     playBtn.addEventListener("click", function () { if (timer) stop(); else play(); });
-    document.getElementById("sq-step").addEventListener("click", function () { stop(); show(cur >= M.length - 1 ? 0 : cur + 1); });
+    document.getElementById("sq-step").addEventListener("click", function () { stop(); show(cur >= D.msgs.length - 1 ? 0 : cur + 1); });
     document.getElementById("sq-reset").addEventListener("click", function () { stop(); show(-1); });
-    show(-1);
+    setMode("pl");
     if ("IntersectionObserver" in window && !reduced) {
       var seen = false;
       new IntersectionObserver(function (es) { if (!seen && es[0].isIntersecting) { seen = true; play(); } }, { threshold: 0.6 }).observe(svg);
@@ -557,16 +632,16 @@ svg.sv{width:100%;height:auto;display:block;min-width:700px;}
     function renderBulk() {
       var hasRec = rec.checked && qa > 0;
       var total = qa + qb, recUnits = hasRec ? qa : 0;
-      var aSource = hasRec ? "price record" : "catalog (product P)";
+      var aSource = hasRec ? "price record" : "catalog (T-shirt)";
       var aQty = hasRec ? qa : total - recUnits;
       var aTiers = hasRec ? REC : CAT;
       var bQty = total - recUnits;
       document.getElementById("bk-a").textContent = qa;
       document.getElementById("bk-b").textContent = qb;
       out.innerHTML =
-        card("Line A", qa > 0, aSource, aQty, hasRec ? "(A's own total)" : "(A + B, product total)", aTiers, pick(aTiers, aQty)) +
-        card("Line B", qb > 0, "catalog (product P)", bQty, "(A + B = " + total + (recUnits ? ", minus " + recUnits + " priced from records" : "") + ")", CAT, pick(CAT, bQty)) +
-        '<div class="bk-note">Catalog tiers for product P: 3-5 units 5% off, 6+ 10% off. A\'s record tiers: 4+ units 3.00 off. Lines A and B are different variants of the same product.</div>';
+        card("Item A (variant 321)", qa > 0, aSource, aQty, hasRec ? "(Item A's own total)" : "(Item A + Item B, T-shirt total)", aTiers, pick(aTiers, aQty)) +
+        card("Item B (variant 322)", qb > 0, "catalog (T-shirt)", bQty, "(Item A + Item B = " + total + (recUnits ? ", minus " + recUnits + " priced from records" : "") + ")", CAT, pick(CAT, bQty)) +
+        '<div class="bk-note">Catalog tiers for the T-shirt (product 10): 3-5 units 5% off, 6+ 10% off. Item A\'s record tiers: 4+ units 3.00 off. The two lines are different variants of the same product.</div>';
     }
     bulk.addEventListener("click", function (e) {
       var b = e.target.closest("button[data-d]"); if (!b) return;
