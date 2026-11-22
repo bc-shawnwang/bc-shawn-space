@@ -172,6 +172,67 @@ footer a:hover{color:var(--amber);}
 .steps{counter-reset:s;list-style:none;padding:0;margin:10px 0 0;}
 .steps li{counter-increment:s;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:8px 12px 8px 40px;margin-bottom:8px;font-size:13px;position:relative;}
 .steps li::before{content:counter(s);position:absolute;left:12px;top:8px;font-family:var(--mono);font-size:12px;color:var(--amber);}
+
+/* widgets */
+.wg{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:10px 0 20px;}
+.wg .label{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.wg .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+.wg .b{font:inherit;font-size:12.5px;font-family:var(--mono);background:var(--surface-2);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;}
+.wg .b:hover{color:var(--text);}
+.wg .b.primary{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-dim);}
+.wg .count{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto;}
+.sqscroll{overflow-x:auto;}
+svg.sv{width:100%;height:auto;display:block;min-width:700px;}
+.sv-life{stroke:var(--border);stroke-width:1.2;stroke-dasharray:4 4;}
+.sv-box{fill:var(--surface-2);stroke:var(--border);}
+.sv-name{fill:var(--text);font:600 12.5px var(--sans);}
+.sv-sub{fill:var(--muted);font:10.5px var(--mono);}
+.sv-msg{opacity:0;transition:opacity .45s ease;}
+.sv-msg.on{opacity:.5;}
+.sv-msg.cur{opacity:1;}
+.sv-call{stroke:var(--teal-text);stroke-width:1.7;}
+.sv-ret{stroke:var(--blue-text);stroke-width:1.5;}
+.sv-msg line{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);}
+.sv-msg.on line{stroke-dashoffset:0;transition:stroke-dashoffset .6s ease;}
+.sv-head{fill:var(--muted);}
+.sv-t{fill:var(--text);font:11.5px var(--mono);}
+.sv-num{fill:var(--muted);font:600 11px var(--mono);}
+.sv-note{fill:var(--amber-bg);stroke:var(--amber-dim);}
+.sv-msg.cur .sv-note{stroke:var(--amber);}
+.sv-dot{fill:var(--amber);}
+#sq-pay{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:10px 14px;font-size:13px;min-height:84px;margin-top:10px;}
+#sq-pay b{color:var(--amber);}
+#sq-pay code{font-size:12px;}
+/* bulk demo */
+.bk-ctl{display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-bottom:12px;font-size:13px;}
+.bk-ctl .num{display:inline-flex;align-items:center;gap:4px;}
+.bk-ctl .num button{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);cursor:pointer;font:inherit;}
+.bk-ctl .num output{display:inline-block;min-width:26px;text-align:center;font-family:var(--mono);}
+.bk-ctl label.chk{display:inline-flex;gap:6px;align-items:center;cursor:pointer;}
+.bk-out{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;}
+.bk-card{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:10px 12px;font-size:13px;transition:opacity .3s;}
+.bk-card.off{opacity:.4;}
+.bk-card h5{margin:0 0 6px;font-size:13px;}
+.bk-card .qty{font-family:var(--mono);color:var(--amber);}
+.ladder{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px;}
+.ladder .chip{font-family:var(--mono);font-size:11px;border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--muted);transition:all .3s;}
+.ladder .chip.hit{background:var(--teal-bg);color:var(--teal-text);border-color:rgba(29,158,117,.5);transform:translateY(-1px);}
+.bk-note{grid-column:1/-1;font-size:12.5px;color:var(--muted);}
+/* waterfall */
+.wf{display:grid;gap:6px;margin:6px 0 4px;}
+.wf .row{display:grid;grid-template-columns:minmax(150px,1.1fr) 70px 2fr 70px;gap:10px;align-items:center;font-size:12.5px;opacity:0;transform:translateY(4px);transition:opacity .4s ease,transform .4s ease;}
+.wf .row.show{opacity:1;transform:none;}
+.wf .row .lbl{color:var(--text);}
+.wf .row .dl{font-family:var(--mono);text-align:right;}
+.wf .row .dl.up{color:var(--red-text);}
+.wf .row .dl.dn{color:var(--teal-text);}
+.wf .row .track{display:block;background:var(--surface-2);border-radius:5px;height:14px;overflow:hidden;}
+.wf .row .fill{display:block;height:100%;width:0;background:var(--amber);border-radius:5px;transition:width .6s ease;}
+.wf .row.fin .fill{background:var(--teal-text);}
+.wf .row .val{font-family:var(--mono);text-align:right;}
+.wf .row.fin .lbl,.wf .row.fin .val{font-weight:700;}
+@media(max-width:640px){.wf .row{grid-template-columns:1fr 60px 1fr 60px;}}
+@media(prefers-reduced-motion:reduce){.sv-msg,.sv-msg.on line,.wf .row,.wf .row .fill,.ladder .chip{transition:none;}}
 </style>
 </head>
 <body>
@@ -228,6 +289,20 @@ footer a:hover{color:var(--amber);}
     <li><strong>Response.</strong> Each result becomes a <code>CartSelectionPriceWithNullablePricesProto</code>, in request order. A line with no price comes back with all price fields unset.</li>
   </ol>
 
+  <h3>Watch one request</h3>
+  <p>A cart with three lines goes through the service. Press <strong>Play</strong>, or <strong>Step</strong> to move one message at a time. The box under the diagram says what the data looks like at that point. The example: lines L1 (variant 321 &times; 2) and L2 (variant 322 &times; 3) are the same product 10, and L3 is a product Catalog does not return. The group has a price list with a record for variant 321 only.</p>
+  <div class="wg" id="sq-wg">
+    <div class="bar">
+      <button class="b primary" id="sq-play" type="button">&#9654; Play</button>
+      <button class="b" id="sq-step" type="button">Step</button>
+      <button class="b" id="sq-reset" type="button">Reset</button>
+      <span class="count" id="sq-count"></span>
+    </div>
+    <div class="sqscroll"><svg class="sv" id="sq-svg" viewBox="0 0 880 560" role="img" aria-label="Sequence of one GetCartPricing request"></svg></div>
+    <div id="sq-pay"></div>
+  </div>
+
+
   <h2 id="request">3. Request fields</h2>
   <p><code>GetCartPricingReqProto</code>. The "sent from" column is how bcapp fills it (<code>CartPricingGrpcMapper</code>). Only lines that need a price are sent: custom products, gift certificates and custom-price lines are left out.</p>
   <div class="card-table f"><table>
@@ -281,14 +356,28 @@ footer a:hover{color:var(--amber);}
   </table></div>
   <p><strong>Example.</strong> Product P has catalog tiers. The cart has variant A &times; 2, which has a price record, and variant B &times; 3, which has none. A uses its record tiers with quantity 2. B uses P's catalog tiers with quantity (2 + 3) &minus; 2 = 3, because A's units were priced from records and do not count towards the catalog tier.</p>
 
+  <div class="wg" id="bulk-wg">
+    <div class="label">Try it: the same product on two lines</div>
+    <div class="bk-ctl">
+      <span class="num">Variant A quantity <button type="button" data-d="a-1" aria-label="Decrease A">&minus;</button><output id="bk-a">2</output><button type="button" data-d="a+1" aria-label="Increase A">+</button></span>
+      <span class="num">Variant B quantity <button type="button" data-d="b-1" aria-label="Decrease B">&minus;</button><output id="bk-b">3</output><button type="button" data-d="b+1" aria-label="Increase B">+</button></span>
+      <label class="chk"><input type="checkbox" id="bk-rec" checked> A has a price record</label>
+    </div>
+    <div class="bk-out" id="bk-out"></div>
+  </div>
+
+
   <h2 id="adjust">6. Adjusting the price</h2>
   <p>Each line starts from the selected variant's <code>calculated_price</code>: the record's, or catalog's with the sale price already applied. What happens next depends on the source. Pick one:</p>
   <div class="switcher" id="sw-adj">
     <div class="label">Where the price came from</div>
     <div class="seg" id="adj-seg" role="group" aria-label="Price source"></div>
-    <ol class="steps" id="adj-steps"></ol>
+    <div class="wf" id="adj-rows"></div>
+    <div class="bar" style="margin-top:10px"><button class="b primary" id="adj-replay" type="button" style="font:inherit;font-size:12.5px;font-family:var(--mono);background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-dim);border-radius:6px;padding:6px 12px;cursor:pointer;">&#8635; Replay</button></div>
     <p class="small muted" id="adj-note"></p>
+    <p class="small muted">Illustrative numbers: catalog price 50.00 (price list record 46.00), a relative rule of +4.00, a tier of 5.00 off, a 10% customer group discount, and a picklist priced 3.00. Bars show the running price.</p>
   </div>
+
   <ul>
     <li><strong>Rules</strong> are the option set rules, then the product rules. Each is a percentage, a relative amount or a fixed price.</li>
     <li><strong>Customer group discount</strong> uses the same selection as the estimate RPC: see <a href="../ListEstimatedTaxProductPrices/index.html#adjust">what changes <code>calculated_price</code></a>. It is applied to the product's price and to each picklist's own price.</li>
@@ -358,66 +447,207 @@ footer a:hover{color:var(--amber);}
 </main>
 <script>
 (function () {
-  var O = {
-    pl: {
-      label: "Price list record",
-      steps: [
-        "Start: the record's <code>calculated_price</code>",
-        "Apply the <b>bulk tier</b> (from the record, matched on the variant's cart quantity)",
-        "Apply option set rules, then product rules",
-        "Add picklist prices (null if any is null)",
-        "Floor at 0"
-      ],
-      note: "Price list prices never get customer group discounts. The tier goes first and is not floored on its own."
-    },
-    cat: {
-      label: "Catalog, no discounts",
-      steps: [
-        "Start: catalog <code>calculated_price</code> &times; exchange rate",
-        "Apply option set rules, then product rules",
-        "Apply the <b>bulk tier</b> (catalog tier, floored at 0)",
-        "Add picklist prices (null if any is null)",
-        "Floor at 0"
-      ],
-      note: "Used in None mode, and in Discounts mode when there are no discounts for these products."
-    },
-    before: {
-      label: "Catalog, discounts, tier before",
-      steps: [
-        "Start: catalog <code>calculated_price</code> &times; exchange rate",
-        "Apply option set rules, then product rules",
-        "Apply the <b>bulk tier</b> (floored at 0)",
-        "Apply the <b>customer group discount</b> to the product price and to each picklist's own price",
-        "Add the discounted picklist prices, floor at 0"
-      ],
-      note: "Discounts mode, with the store setting <code>applyBulkTiersAfterDiscounts</code> off."
-    },
-    after: {
-      label: "Catalog, discounts, tier after",
-      steps: [
-        "Start: catalog <code>calculated_price</code> &times; exchange rate",
-        "Apply option set rules, then product rules",
-        "Apply the <b>customer group discount</b> to the product price and to each picklist's own price",
-        "Apply the <b>bulk tier</b> to the discounted product price (floored at 0)",
-        "Add the discounted picklist prices, floor at 0"
-      ],
-      note: "Discounts mode, with <code>applyBulkTiersAfterDiscounts</code> on (the store feature <code>Feature_ApplyBulkDiscountToOriginalPrice</code>)."
-    }
-  };
-  var seg = document.getElementById("adj-seg"), list = document.getElementById("adj-steps"), note = document.getElementById("adj-note");
-  function show(k) {
-    list.innerHTML = O[k].steps.map(function (s) { return "<li>" + s + "</li>"; }).join("");
-    note.innerHTML = O[k].note;
-    Array.prototype.forEach.call(seg.children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.k === k)); });
+  var reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, parent) {
+    var e = document.createElementNS(NS, tag);
+    Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+    if (parent) parent.appendChild(e);
+    return e;
   }
-  Object.keys(O).forEach(function (k) {
-    var b = document.createElement("button");
-    b.type = "button"; b.dataset.k = k; b.textContent = O[k].label; b.setAttribute("aria-pressed", "false");
-    b.addEventListener("click", function () { show(k); });
-    seg.appendChild(b);
-  });
-  show("pl");
+
+  // ---------------------------------------------------------------- 1. sequence
+  var P = [["bcapp", "CartPricingServiceClient"], ["Pricing RPC", "CartPricingService"], ["Catalog RPC", "ListCatalogPrices"], ["Price records", "price lists store"]];
+  var X = [110, 340, 570, 780];
+  var M = [
+    { k: "call", a: 0, b: 1, t: "GetCartPricing", pay: "<b>Request.</b> <code>store_id</code>, <code>currency_code</code> EUR, <code>customer_group_id</code> 5, <code>channel_id</code> 1, and three items: <code>L1</code> product 10, variant 321, qty 2. <code>L2</code> product 10, variant 322, qty 3. <code>L3</code> product 99, qty 1." },
+    { k: "self", a: 1, t: "currency projection:\nrate 0.8, 2 decimals", pay: "<b>Context.</b> The service looks the currency up by store and code. It gets an exchange rate of 0.8 and 2 decimal places, and builds the <code>CartPricingContext</code>." },
+    { k: "call", a: 1, b: 2, t: "ListCatalogPrices (3 items)", pay: "<b>Catalog call.</b> One call for all items, with a 15 second deadline. Options with a value of 0 (unselected picklists) are removed first." },
+    { k: "ret", a: 2, b: 1, t: "variants, rules, tiers (× 0.8)", pay: "<b>Catalog answer.</b> L1 and L2 come back with their selected variant, rules and bulk tiers, every amount multiplied by 0.8. <code>L3</code> is not returned, so it gets empty data. If the whole call had failed, all three would be empty." },
+    { k: "self", a: 1, t: "pricing mode: PriceList #7", pay: "<b>Mode.</b> Group 5 has a price list, so the mode is PriceList with list ID 7. Discounts are not loaded in this mode." },
+    { k: "call", a: 1, b: 3, t: "records for variants 321, 322", pay: "<b>Price records.</b> The service asks for active records of list 7 in EUR for the selected variants, with their bulk tiers. Stale reads are allowed." },
+    { k: "ret", a: 3, b: 1, t: "record for 321 only", pay: "<b>Records answer.</b> Variant 321 has a record: L1 takes every price from it. Variant 322 has none, and this is not an inc/ex list, so L2 keeps its catalog prices." },
+    { k: "self", a: 1, t: "bulk tier + adjust per line", pay: "<b>Tier and adjustments.</b> Quantities are summed over the cart. L1 uses its record's tiers with quantity 2. L2 uses product 10's catalog tiers with (2 + 3) − 2 = 3. Each line then gets rules, tier, discount and picklists in the order for its source." },
+    { k: "ret", a: 1, b: 0, t: "selection_prices[3]", pay: "<b>Response.</b> Three entries in request order. L1 and L2 have prices. <code>L3</code> has an empty <code>selection_price</code>, which bcapp reads as no price and removes from the cart. <code>prices_entered_tax_inclusive</code> is not set." }
+  ];
+  var svg = document.getElementById("sq-svg");
+  if (svg) {
+    var ROW = 52, TOP = 70, H = TOP + ROW * M.length + 20;
+    svg.setAttribute("viewBox", "0 0 880 " + H);
+    var defs = el("defs", {}, svg);
+    var mk = el("marker", { id: "sv-ah", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, defs);
+    el("path", { d: "M0,0 L10,5 L0,10 z", "class": "sv-head" }, mk);
+    P.forEach(function (p, i) {
+      el("line", { "class": "sv-life", x1: X[i], y1: 50, x2: X[i], y2: H - 6 }, svg);
+      el("rect", { "class": "sv-box", x: X[i] - 90, y: 4, width: 180, height: 44, rx: 7 }, svg);
+      var n = el("text", { "class": "sv-name", x: X[i], y: 23, "text-anchor": "middle" }, svg); n.textContent = p[0];
+      var s = el("text", { "class": "sv-sub", x: X[i], y: 39, "text-anchor": "middle" }, svg); s.textContent = p[1];
+    });
+    var groups = M.map(function (m, i) {
+      var g = el("g", { "class": "sv-msg" }, svg);
+      var y = TOP + ROW * i + 20;
+      var num = el("text", { "class": "sv-num", x: 6, y: y + 4 }, g); num.textContent = String(i + 1);
+      if (m.k === "self") {
+        var lines = m.t.split("\n"), x = X[m.a] + 10;
+        el("rect", { "class": "sv-note", x: x, y: y - 16, width: 230, height: 14 * lines.length + 12, rx: 5 }, g);
+        lines.forEach(function (ln, j) { var t = el("text", { "class": "sv-t", x: x + 8, y: y + 1 + 14 * j }, g); t.textContent = ln; });
+      } else {
+        var x1 = X[m.a], x2 = X[m.b], dir = x2 > x1 ? -3 : 3;
+        var ln = el("line", { "class": m.k === "ret" ? "sv-ret" : "sv-call", x1: x1, y1: y, x2: x2 + dir, y2: y, "marker-end": "url(#sv-ah)" }, g);
+        ln.style.setProperty("--len", Math.abs(x2 - x1));
+        var t = el("text", { "class": "sv-t", x: (x1 + x2) / 2, y: y - 7, "text-anchor": "middle" }, g); t.textContent = m.t;
+      }
+      return g;
+    });
+    var dot = el("circle", { "class": "sv-dot", r: 5, cx: -20, cy: -20 }, svg);
+    var pay = document.getElementById("sq-pay"), count = document.getElementById("sq-count"), playBtn = document.getElementById("sq-play");
+    var cur = -1, timer = null;
+    function flyDot(i) {
+      var m = M[i];
+      if (reduced || m.k === "self") { dot.setAttribute("cx", -20); return; }
+      var y = TOP + ROW * i + 20, x1 = X[m.a], x2 = X[m.b];
+      dot.setAttribute("cy", y);
+      dot.animate([{ transform: "translateX(" + x1 + "px)", opacity: 1 }, { transform: "translateX(" + x2 + "px)", opacity: 1 }, { transform: "translateX(" + x2 + "px)", opacity: 0 }], { duration: 650, easing: "ease-in-out", fill: "forwards" });
+      dot.setAttribute("cx", 0);
+    }
+    function show(k) {
+      cur = k;
+      groups.forEach(function (g, i) { g.classList.toggle("on", i <= k); g.classList.toggle("cur", i === k); });
+      pay.innerHTML = k < 0 ? "Press <b>Play</b> or <b>Step</b> to start." : M[k].pay;
+      count.textContent = k < 0 ? "" : "Message " + (k + 1) + " of " + M.length;
+      if (k >= 0) flyDot(k); else dot.setAttribute("cx", -20);
+    }
+    function stop() { if (timer) { clearInterval(timer); timer = null; } playBtn.innerHTML = "&#9654; Play"; }
+    function play() {
+      stop();
+      if (cur >= M.length - 1) show(-1);
+      playBtn.innerHTML = "&#10073;&#10073; Pause";
+      timer = setInterval(function () { if (cur >= M.length - 1) { stop(); return; } show(cur + 1); }, 2300);
+      show(cur + 1);
+    }
+    playBtn.addEventListener("click", function () { if (timer) stop(); else play(); });
+    document.getElementById("sq-step").addEventListener("click", function () { stop(); show(cur >= M.length - 1 ? 0 : cur + 1); });
+    document.getElementById("sq-reset").addEventListener("click", function () { stop(); show(-1); });
+    show(-1);
+    if ("IntersectionObserver" in window && !reduced) {
+      var seen = false;
+      new IntersectionObserver(function (es) { if (!seen && es[0].isIntersecting) { seen = true; play(); } }, { threshold: 0.6 }).observe(svg);
+    }
+  }
+
+  // ---------------------------------------------------------------- 2. bulk tier demo
+  var bulk = document.getElementById("bulk-wg");
+  if (bulk) {
+    var CAT = [{ min: 3, max: 5, t: "3-5: 5% off" }, { min: 6, max: null, t: "6+: 10% off" }];
+    var REC = [{ min: 4, max: null, t: "4+: 3.00 off" }];
+    var qa = 2, qb = 3;
+    var out = document.getElementById("bk-out"), rec = document.getElementById("bk-rec");
+    function pick(tiers, q) {
+      for (var i = 0; i < tiers.length; i++) if (tiers[i].min <= q && (tiers[i].max === null || q <= tiers[i].max)) return i;
+      return -1;
+    }
+    function ladder(tiers, hit) {
+      return '<div class="ladder">' + tiers.map(function (t, i) { return '<span class="chip' + (i === hit ? " hit" : "") + '">' + t.t + "</span>"; }).join("") + "</div>";
+    }
+    function card(name, present, source, qty, why, tiers, hit) {
+      if (!present) return '<div class="bk-card off"><h5>' + name + '</h5>Not in the cart.</div>';
+      return '<div class="bk-card"><h5>' + name + '</h5>Tiers: <b>' + source + '</b><br>Matched on quantity <span class="qty">' + qty + "</span> <span class='muted small'>" + why + "</span>" + ladder(tiers, hit) +
+        (hit >= 0 ? "Applied: " + tiers[hit].t : "No tier applies") + "</div>";
+    }
+    function renderBulk() {
+      var hasRec = rec.checked && qa > 0;
+      var total = qa + qb, recUnits = hasRec ? qa : 0;
+      var aSource = hasRec ? "price record" : "catalog (product P)";
+      var aQty = hasRec ? qa : total - recUnits;
+      var aTiers = hasRec ? REC : CAT;
+      var bQty = total - recUnits;
+      document.getElementById("bk-a").textContent = qa;
+      document.getElementById("bk-b").textContent = qb;
+      out.innerHTML =
+        card("Line A", qa > 0, aSource, aQty, hasRec ? "(A's own total)" : "(A + B, product total)", aTiers, pick(aTiers, aQty)) +
+        card("Line B", qb > 0, "catalog (product P)", bQty, "(A + B = " + total + (recUnits ? ", minus " + recUnits + " priced from records" : "") + ")", CAT, pick(CAT, bQty)) +
+        '<div class="bk-note">Catalog tiers for product P: 3-5 units 5% off, 6+ 10% off. A\'s record tiers: 4+ units 3.00 off. Lines A and B are different variants of the same product.</div>';
+    }
+    bulk.addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-d]"); if (!b) return;
+      var d = b.dataset.d;
+      if (d === "a-1") qa = Math.max(0, qa - 1); if (d === "a+1") qa = Math.min(12, qa + 1);
+      if (d === "b-1") qb = Math.max(0, qb - 1); if (d === "b+1") qb = Math.min(12, qb + 1);
+      renderBulk();
+    });
+    rec.addEventListener("change", renderBulk);
+    renderBulk();
+  }
+
+  // ---------------------------------------------------------------- 3. price waterfall
+  var BASE = 50, RECP = 46, RULE = 4, TIER = 5, DISC = 0.10, PICK = 3;
+  var money = function (n) { return n.toFixed(2); };
+  function floor0(n) { return n < 0 ? 0 : n; }
+  function build(kind) {
+    var rows = [], v;
+    function add(label, before, after, fin) { rows.push({ label: label, d: after - before, v: after, fin: !!fin }); }
+    function start(label, x) { rows.push({ label: label, d: null, v: x }); return x; }
+    if (kind === "pl") {
+      v = start("Record calculated price", RECP);
+      var a = v - TIER; add("Bulk tier (5.00 off)", v, a); v = a;
+      a = v + RULE; add("Rules (+4.00)", v, a); v = a;
+      a = floor0(v + PICK); add("Picklist (+3.00)", v, a); v = a;
+    } else if (kind === "cat") {
+      v = start("Catalog calculated price × rate", BASE);
+      var b = v + RULE; add("Rules (+4.00)", v, b); v = b;
+      b = floor0(v - TIER); add("Bulk tier (5.00 off)", v, b); v = b;
+      b = floor0(v + PICK); add("Picklist (+3.00)", v, b); v = b;
+    } else if (kind === "before") {
+      v = start("Catalog calculated price × rate", BASE);
+      var c = v + RULE; add("Rules (+4.00)", v, c); v = c;
+      c = floor0(v - TIER); add("Bulk tier (5.00 off)", v, c); v = c;
+      c = v * (1 - DISC); add("Customer group discount (10%)", v, c); v = c;
+      c = floor0(v + PICK * (1 - DISC)); add("Discounted picklist (+2.70)", v, c); v = c;
+    } else {
+      v = start("Catalog calculated price × rate", BASE);
+      var d = v + RULE; add("Rules (+4.00)", v, d); v = d;
+      d = v * (1 - DISC); add("Customer group discount (10%)", v, d); v = d;
+      d = floor0(v - TIER); add("Bulk tier (5.00 off)", v, d); v = d;
+      d = floor0(v + PICK * (1 - DISC)); add("Discounted picklist (+2.70)", v, d); v = d;
+    }
+    rows.push({ label: "calculated_price", d: null, v: v, fin: true });
+    return rows;
+  }
+  var O = {
+    pl: { label: "Price list record", note: "Price list prices never get customer group discounts. The tier goes first and is not floored on its own." },
+    cat: { label: "Catalog, no discounts", note: "Used in None mode, and in Discounts mode when there are no discounts for these products. The catalog tier is floored at 0." },
+    before: { label: "Catalog, discounts, tier before", note: "Discounts mode, with the store setting <code>applyBulkTiersAfterDiscounts</code> off. The picklist's own price is discounted too." },
+    after: { label: "Catalog, discounts, tier after", note: "Discounts mode, with <code>applyBulkTiersAfterDiscounts</code> on (the store feature <code>Feature_ApplyBulkDiscountToOriginalPrice</code>). The same inputs end 0.50 lower here than in the previous option, because a fixed tier comes off a smaller number." }
+  };
+  var seg = document.getElementById("adj-seg"), rowsEl = document.getElementById("adj-rows"), note = document.getElementById("adj-note");
+  var kind = "pl", wtimer = [];
+  function paint() {
+    wtimer.forEach(clearTimeout); wtimer = [];
+    var rows = build(kind), MAX = 60;
+    rowsEl.innerHTML = rows.map(function (r) {
+      var dl = r.d === null ? "" : (r.d >= 0 ? "+" : "−") + money(Math.abs(r.d));
+      return '<div class="row' + (r.fin ? " fin" : "") + '"><span class="lbl">' + r.label + '</span><span class="dl ' + (r.d === null ? "" : r.d >= 0 ? "up" : "dn") + '">' + dl + '</span><span class="track"><span class="fill" data-w="' + Math.min(100, r.v / MAX * 100) + '"></span></span><span class="val">' + money(r.v) + "</span></div>";
+    }).join("");
+    var els = rowsEl.children;
+    Array.prototype.forEach.call(els, function (row, i) {
+      var go = function () { row.classList.add("show"); row.querySelector(".fill").style.width = row.querySelector(".fill").dataset.w + "%"; };
+      if (reduced) go(); else wtimer.push(setTimeout(go, 350 * i));
+    });
+    note.innerHTML = O[kind].note;
+    Array.prototype.forEach.call(seg.children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.k === kind)); });
+  }
+  if (seg) {
+    Object.keys(O).forEach(function (k) {
+      var b = document.createElement("button");
+      b.type = "button"; b.dataset.k = k; b.textContent = O[k].label; b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", function () { kind = k; paint(); });
+      seg.appendChild(b);
+    });
+    document.getElementById("adj-replay").addEventListener("click", paint);
+    paint();
+  }
 })();
 </script>
+
 </body>
 </html>
