@@ -187,6 +187,10 @@ h4.sub{font-size:15.5px;font-weight:650;margin:30px 0 8px;color:var(--text);text
 .mode-notes{font-size:13px;color:var(--muted);margin:0 0 10px;}
 
 .card-table.f td:first-child code{white-space:nowrap;word-break:keep-all;}
+.card-table.lines{overflow-x:visible;}
+.card-table.lines table{table-layout:fixed;width:100%;}
+.card-table.f.lines td code,.card-table.f.lines td:first-child code{white-space:normal;overflow-wrap:anywhere;word-break:normal;}
+.card-table tr.grp td{background:var(--surface-2);color:var(--muted);font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;}
 .src{display:inline-block;font-family:var(--mono);font-size:10.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--border);margin:0 4px 3px 0;white-space:nowrap;}
 .src.cat{background:var(--blue-bg);color:var(--blue-text);}
 .src.pl{background:var(--teal-bg);color:var(--teal-text);}
@@ -1069,8 +1073,8 @@ sequenceDiagram
   <div class="card-table"><table>
     <thead><tr><th>Source</th><th>What it contributes</th><th>Cart field it ends up in</th></tr></thead>
     <tbody>
-      <tr><td><span class="src cat">Catalog</span></td><td>The product or variant prices: <code>price</code>, <code>calculated_price</code> (sale price already applied), <code>retail_price</code>, plus bulk tiers, option rules and picklists used to adjust them. With the flag off bcapp reads these from its own catalog gateway. With the flag on the Pricing service asks Catalog (<code>ListCatalogPrices</code>).</td><td><code>itemPrice</code>, then <code>basePrice</code></td></tr>
-      <tr><td><span class="src pl">Pricing service</span></td><td>When a price list applies, its record replaces the catalog <code>price</code>, <code>calculated_price</code>, <code>sale_price</code>, <code>retail_price</code> and MAP, and brings its own bulk tiers. Also whether prices are entered tax inclusive. With the flag on, the service also does the adjustments and returns the final per-item price: for a price list record, bulk tier, rules, picklists; for a catalog price, rules, bulk tier, customer group discounts, picklists.</td><td><code>itemPrice</code>, <code>basePrice</code>, <code>pricesEnteredTaxInclusive</code></td></tr>
+      <tr><td><span class="src cat">Catalog</span></td><td>The product or variant prices: <code>price</code>, <code>calculated_price</code> (sale price already applied), <code>retail_price</code>, plus bulk tiers, option rules and picklists used to adjust them. The Pricing service asks Catalog for them (<code>ListCatalogPrices</code>).</td><td><code>itemPrice</code>, then <code>basePrice</code></td></tr>
+      <tr><td><span class="src pl">Pricing service</span></td><td>When a price list applies, its record replaces the catalog <code>price</code>, <code>calculated_price</code>, <code>sale_price</code>, <code>retail_price</code> and MAP, and brings its own bulk tiers. Also whether prices are entered tax inclusive. The service also does the adjustments and returns the final per-item price: for a price list record, bulk tier, rules, picklists; for a catalog price, rules, bulk tier, customer group discounts, picklists.</td><td><code>itemPrice</code>, <code>basePrice</code>, <code>pricesEnteredTaxInclusive</code></td></tr>
       <tr><td><span class="src tax">Tax</span></td><td>The tax-inclusive and tax-exclusive unit price and totals of each line, from the tax estimate (<code>CartTaxItemApplier</code>). Used to show prices the way the shopper's tax zone and customer group display them.</td><td>item <code>price</code>, <code>discountedTotal</code>, <code>calculationTotal</code></td></tr>
       <tr><td><span class="src promo">Promotions</span></td><td>Product-based discounts and coupon amounts on each line, and order-level discounts on the cart.</td><td>item <code>discounts</code>, cart <code>discountAmount</code></td></tr>
     </tbody>
@@ -1083,46 +1087,86 @@ sequenceDiagram
     <li><code>pricesEnteredTaxInclusive</code>: how the merchant entered prices, set during hydration (above). It is not in the response; it only affects <code>comparisonPrice</code>.</li>
   </ul>
 
-  <h4 class="sub">Line items (physical and digital)</h4>
-  <div class="callout amber"><strong>Name clash.</strong> <code>salePrice</code> here is <em>not</em> the catalog <code>sale_price</code>. It is the unit price after product-based discounts. A catalog sale is already inside <code>listPrice</code>.</div>
-  <div class="card-table f"><table>
-    <thead><tr><th>Field</th><th>Concept</th><th>Starts as</th><th>Logic</th></tr></thead>
+  <h4 class="sub">From cart properties to response fields</h4>
+  <p>Two tables. The first lists the price-related properties of the cart (<code>Cart</code>) and its items (<code>CartItem</code>): where each value comes from, how it is computed and notes. The second lists the response fields and which of those properties they read. Both assume <code>hydrate_cart_prices_from_pricing_service</code> is <strong>on</strong>, so prices come from the <code>GetCartPricing</code> RPC.</p>
+  <p>Hydration copies the RPC result onto the cart item in three steps:</p>
+  <ul>
+    <li><span class="src pl">Pricing service</span> <code>GetCartPricingRespProto.selection_prices[].selection_price</code> &rarr; <code>CartPricingGrpcMapper::convertCartResponse</code> &rarr; <code>SelectionPrice</code>.</li>
+    <li><code>PriceAssignmentService::mapPricingSelectionPriceToCartItemPrice</code> builds a <code>Price</code> from it.</li>
+    <li><code>CartItem::setBasePrice(SelectionPrice.calculatedPrice)</code> and <code>CartItem::setItemPrice(Price)</code>.</li>
+  </ul>
+  <p class="small muted">Inside the service the starting values are the price list record when a price list applies, else the catalog price (<code>ListCatalogPrices</code>). The service returns one merged <code>selection_price</code> per item either way.</p>
+
+  <p><strong>Table 1. Cart and cart item properties</strong></p>
+  <div class="card-table f lines"><table>
+    <colgroup><col style="width:21%"><col style="width:29%"><col style="width:27%"><col style="width:23%"></colgroup>
+    <thead><tr><th>Property</th><th>From</th><th>Computation</th><th>Comment</th></tr></thead>
     <tbody>
-      <tr><td><code>originalPrice</code></td><td>The product's regular price, before any sale or adjustment</td><td><span class="src cat">Catalog</span> <span class="src pl">Pricing service</span></td><td><code>itemPrice.price</code>: the <code>price</code> from the catalog, or from the price list record. 0 if the line has no item price (for example a custom product).</td></tr>
-      <tr><td><code>listPrice</code></td><td>Unit price before discounts: what the line costs in the cart</td><td><span class="src cat">Catalog</span> <span class="src pl">Pricing service</span> <span class="src calc">Computed</span></td><td><code>basePrice</code>, set at hydration from the result's <code>calculated_price</code>, so it includes a catalog sale, the bulk tier for the quantity, option rules and picklists. 0 for a free item added by a promotion.</td></tr>
-      <tr><td><code>retailPrice</code></td><td>The suggested retail price (MSRP), for display</td><td><span class="src cat">Catalog</span> <span class="src pl">Pricing service</span></td><td><code>itemPrice.retailPrice</code>, passed through. Not recalculated, and not used by the other fields.</td></tr>
-      <tr><td><code>extendedListPrice</code></td><td>Line total before discounts</td><td><span class="src calc">Computed</span></td><td><code>listPrice &times; quantity</code></td></tr>
-      <tr><td><code>discountAmount</code></td><td>Product-based discounts on the line, excluding coupons</td><td><span class="src promo">Promotions</span></td><td><code>getProductBasedDiscountTotalExcludeCoupon</code>: the sum of the line's product-based discounts minus the coupon part. Line total, not per unit.</td></tr>
-      <tr><td><code>couponAmount</code></td><td>The coupon part of those discounts</td><td><span class="src promo">Promotions</span></td><td>Sum of the product-based discounts that are coupon discounts</td></tr>
-      <tr><td><code>discounts[]</code></td><td>Each discount on the line, by ID</td><td><span class="src promo">Promotions</span></td><td><code>{ id, discountedAmount }</code> for every entry in <code>getDiscounts()</code>, with a <code>displayName</code> when the manual discount name flag is on</td></tr>
-      <tr><td><code>salePrice</code></td><td>Unit price the shopper pays after line discounts</td><td><span class="src calc">Computed</span> <span class="src tax">Tax</span></td><td>The unit price in the display tax treatment (<code>getPrice(displayTaxInclusive)</code>, from the tax estimate) minus <code>discountAmount &divide; quantity</code></td></tr>
-      <tr><td><code>extendedSalePrice</code></td><td>Line total after line discounts</td><td><span class="src calc">Computed</span> <span class="src tax">Tax</span></td><td><code>salePrice &times; quantity</code></td></tr>
-      <tr><td><code>comparisonPrice</code></td><td>The price to show as the "was" price next to the sale price</td><td><span class="src calc">Computed</span></td><td><code>listPrice</code> when there is a discount and prices are entered the way they are displayed (<code>pricesEnteredTaxInclusive == displayTaxInclusive</code>). Otherwise <code>salePrice</code>, so no strike-through.</td></tr>
-      <tr><td><code>extendedComparisonPrice</code></td><td>Same, as a line total</td><td><span class="src calc">Computed</span></td><td><code>extendedListPrice</code> or <code>extendedSalePrice</code>, by the same rule</td></tr>
-      <tr><td><code>isCustomPrice</code></td><td>Whether the price was set by hand, not by pricing</td><td><span class="src calc">Computed</span></td><td><code>false</code> for every line priced by hydration (<code>setBasePrice(..., false)</code>). True for lines with a merchant-set price, which hydration skips, and for free items added by a promotion.</td></tr>
+      <tr class="grp"><td colspan="4">CartItem, from pricing</td></tr>
+      <tr><td><code>CartItem.itemPrice.price</code></td><td><span class="src pl">Pricing service</span> <code>selection_price.price</code> &rarr; <code>SelectionPrice.price</code>. Inside the service: the price list record's <code>price</code>, else the <span class="src cat">Catalog</span> catalog <code>price</code>.</td><td>None.</td><td>The regular price, not adjusted by tiers or rules. Read by <code>getOriginalPrice()</code>, which gives 0.0 when the item has no <code>itemPrice</code>.</td></tr>
+      <tr><td><code>CartItem.itemPrice.calculatedPrice</code></td><td><span class="src pl">Pricing service</span> <code>selection_price.calculated_price</code> &rarr; <code>SelectionPrice.calculatedPrice</code>. Starts as the price list record's calculated price, else the <span class="src cat">Catalog</span> catalog <code>calculated_price</code> (sale price already applied).</td><td><span class="src calc">Computed</span> Adjusted inside the Pricing service (<code>CartPricingService.calculateCartPrice</code>).<br>Price list record: bulk tier, then rules, then picklists.<br>Catalog price: rules, then bulk tier before or after customer group discounts (by store setting), then picklists.</td><td>A null becomes 0.0. Not read by any response field; <code>basePrice</code> carries the same value.</td></tr>
+      <tr class="hl"><td><code>CartItem.basePrice</code><br><span class="muted small"><code>getBasePrice()</code></span></td><td><span class="src calc">Computed</span> <code>SelectionPrice.getCalculatedPrice()</code>, through <code>setBasePrice(..., false, false)</code></td><td>Equals <code>itemPrice.calculatedPrice</code>. <code>getBasePrice()</code> returns 0.0 if the item is free.</td><td>The unit price every other value starts from. Hydration skips custom-price items, which keep their own value.</td></tr>
+      <tr><td><code>CartItem.itemPrice.retailPrice</code></td><td><span class="src pl">Pricing service</span> <code>selection_price.retail_price</code> &rarr; <code>SelectionPrice.retailPrice</code>. Inside the service: the price list record's, else the <span class="src cat">Catalog</span> catalog <code>retail_price</code>.</td><td>None.</td><td>For display only. Nothing is computed from it.</td></tr>
+      <tr><td><code>CartItem.itemPrice.salePrice</code>, <code>.minimumAdvertisedPrice</code>, <code>.bulkPricing</code></td><td><span class="src pl">Pricing service</span> <code>selection_price.sale_price</code>, <code>.map_price</code> and <code>.applied_bulk_tier_pricing</code> &rarr; <code>SelectionPrice.salePrice</code>, <code>.mapPrice</code>, <code>.appliedBulkTierPricing</code>.</td><td>None.</td><td>Kept on the item and stored in the projection's <code>item_price</code> block. Not used by the response.</td></tr>
+      <tr><td><code>CartItem.getQuantity()</code></td><td>The cart line, sent in <code>request_items[].quantity</code>.</td><td>None.</td><td>Multiplier for every extended value.</td></tr>
+      <tr><td><code>CartItem.arePricesEnteredTaxInclusive()</code><br><span class="muted small">and <code>Cart.pricesEnteredTaxInclusive</code></span></td><td><span class="src pl">Pricing service</span> <code>GetCartPricingRespProto.prices_entered_tax_inclusive</code> &rarr; <code>SelectionPriceWithPriceListTaxEnteredAs.pricesEnteredTaxInclusive</code>. Set through <code>setPricesEnteredTaxInclusive</code>.</td><td>None.</td><td>How the merchant entered prices. The comment in <code>applyPrices</code> says it sets the cart and each item.</td></tr>
+      <tr class="grp"><td colspan="4">CartItem, from tax and promotions</td></tr>
+      <tr><td><code>CartItem.price</code><br><span class="muted small"><code>getPrice($incTax)</code>, unit price</span></td><td><span class="src tax">Tax</span> <code>CartTaxItemApplier::apply</code> sets it from <code>ItemTaxCalculator::getApproximateUnitPrice</code> (inclusive and exclusive).</td><td>Unit price with and without tax, from <code>basePrice</code> and the tax rates.</td><td>Approximated by bcapp if the tax estimate did not set it.</td></tr>
+      <tr><td><code>CartItem.getTotal($incTax)</code><br><code>.getDiscountedTotal($incTax)</code><br><code>.getCalculationTotal()</code></td><td><span class="src tax">Tax</span> the same tax estimate. <code>getCalculationTotal()</code> comes from <code>QuoteCalculationTotalService::applyCalculationTotals</code>.</td><td>Line total before discounts, after discounts, and the estimate used as the discount basis.</td><td><code>calculationTotal</code> is set only when <code>TAX-2763.set_calculation_total</code> is on. Otherwise it is <code>basePrice &times; quantity</code>.</td></tr>
+      <tr><td><code>CartItem.productBasedDiscounts</code></td><td><span class="src promo">Promotions</span> item-level manual discounts, promotion rules and coupons, applied after hydration.</td><td>None. A list of discount objects with an amount, some of them coupons.</td><td>Set by <code>applyItemLevelManualDiscounts</code> and <code>applyDiscounts</code>.</td></tr>
+      <tr><td><code>CartItem.getProductBasedDiscountTotal($display, $includeCoupon)</code></td><td><span class="src promo">Promotions</span> <code>productBasedDiscounts</code></td><td>The sum of the amounts, minus <code>getProductBasedCouponAmount()</code> when coupons are excluded. With <code>TAX-2513.convert_discount_amounts_to_tax_display_treatment</code> on, converted to the display tax treatment by <code>ItemTaxCalculator</code>.</td><td>A line total, not per unit.</td></tr>
+      <tr><td><code>CartItem.getProductBasedDiscount(...)</code></td><td><span class="src calc">Computed</span> <code>getProductBasedDiscountTotal(...)</code></td><td><code>total &divide; quantity</code></td><td>Per unit.</td></tr>
+      <tr><td><code>CartItem.getProductBasedCouponAmount()</code></td><td><span class="src promo">Promotions</span> the coupon entries of <code>productBasedDiscounts</code></td><td>Sum of the coupon discount amounts.</td><td></td></tr>
+      <tr><td><code>CartItem.getDiscounts()</code><br><code>.getDiscountAmountTotal()</code></td><td><span class="src promo">Promotions</span> the item's discounts, by ID</td><td><code>getDiscountAmountTotal()</code> is the sum, rounded to the currency, with coupons included by default.</td><td>Includes order-level discounts allocated to the line.</td></tr>
+      <tr><td><code>CartItem.isCustomPrice()</code></td><td><span class="src calc">Computed</span> <code>setBasePrice(..., false)</code> at hydration</td><td>None.</td><td>False for every line priced by hydration. True for a merchant-set price, and for a free item added by a promotion.</td></tr>
+      <tr class="grp"><td colspan="4">Cart</td></tr>
+      <tr><td><code>Cart.getBaseSubTotal()</code><br><span class="muted small">via <code>getCalculationSubtotal()</code></span></td><td><span class="src tax">Tax</span> each visible item's <code>getCalculationTotal().amount</code></td><td>Sum over the visible items.</td><td>Inclusive or exclusive by the display setting.</td></tr>
+      <tr><td><code>Cart.getSubTotal($incTax)</code></td><td><span class="src tax">Tax</span> each item's <code>getTotal($incTax)</code></td><td>Sum over the items.</td><td>Tax approximation, not for accounting.</td></tr>
+      <tr><td><code>Cart.getDiscountedSubTotal($incTax)</code></td><td><span class="src tax">Tax</span> each item's <code>getDiscountedTotal($incTax)</code></td><td>Sum over the items.</td><td></td></tr>
+      <tr><td><code>Cart.getDiscountAmount()</code></td><td><span class="src promo">Promotions</span> cart and product-based discounts, set by <code>applyDiscounts</code></td><td>Not traced in detail.</td><td>Includes the product-based part, which the next row removes.</td></tr>
+      <tr><td><code>Cart.getDiscountAmountWithoutProductBasedDiscounts()</code></td><td><span class="src calc">Computed</span> <code>getDiscountAmount()</code></td><td><code>getDiscountAmount() &minus; getBaseProductBasedDiscountTotal()</code></td><td>Order-level discounts only.</td></tr>
+      <tr><td><code>Cart.getSubTotalLessProductBasedDiscounts($incTax)</code></td><td><span class="src calc">Computed</span> <code>getSubTotal($incTax)</code></td><td><code>getSubTotal($incTax) &minus; getProductBasedDiscountTotal($incTax)</code></td><td></td></tr>
+      <tr><td><code>Cart.getGrandTotal()</code></td><td><span class="src calc">Computed</span> <code>getDiscountedSubTotal(true)</code>, wrapping, shipping, handling, fees, gift certificates</td><td>Discounted subtotal (tax inclusive) + wrapping + shipping + handling + fees &minus; gift certificates. Never below 0, rounded.</td><td>Shipping, handling, wrapping and fees are not traced here.</td></tr>
     </tbody>
   </table></div>
-  <p class="small muted"><strong>Custom items</strong> return only <code>listPrice</code> and <code>extendedListPrice</code>, from <code>basePrice</code>. <strong>Gift certificates</strong> are not covered. The catalog <code>sale_price</code> and MAP are kept on <code>itemPrice</code> but are not in this response.</p>
+
+  <p><strong>Table 2. Storefront Checkout API response fields</strong></p>
+  <div class="callout amber"><strong>Name clash.</strong> The response field <code>salePrice</code> is <em>not</em> the catalog <code>sale_price</code>. It is the unit price after product-based discounts. A catalog sale is already inside <code>listPrice</code>.</div>
+  <p class="small muted">Every value is rounded to the currency's decimals when written (<code>serializePrice</code>), except where noted. <code>displayTaxInclusive</code> is decided by <code>QuoteTaxPriceDisplayService::shouldDisplayTaxInclusive</code>. Physical and digital items return the same fields.</p>
+  <div class="card-table f lines"><table>
+    <colgroup><col style="width:21%"><col style="width:34%"><col style="width:45%"></colgroup>
+    <thead><tr><th>Response field</th><th>From (cart and cart item)</th><th>Computation</th></tr></thead>
+    <tbody>
+      <tr class="grp"><td colspan="3">Line item</td></tr>
+      <tr><td><code>originalPrice</code></td><td><code>CartItem.getOriginalPrice()</code>, which is <code>itemPrice.price</code></td><td>Copied. 0.0 if the item has no <code>itemPrice</code>.</td></tr>
+      <tr><td><code>listPrice</code></td><td><code>CartItem.getBasePrice()</code></td><td>Copied. 0.0 for a free item.</td></tr>
+      <tr><td><code>retailPrice</code></td><td><code>CartItem.itemPrice.retailPrice</code></td><td>Copied, not rounded. 0 if the item has no <code>itemPrice</code>.</td></tr>
+      <tr><td><code>extendedListPrice</code></td><td><code>CartItem.getExtendedListPrice()</code></td><td><code>basePrice &times; quantity</code></td></tr>
+      <tr><td><code>discountAmount</code></td><td><code>CartItem.getProductBasedDiscountTotalExcludeCoupon($displayTaxInclusive)</code></td><td>Sum of the item's product-based discounts, without coupons. A line total.</td></tr>
+      <tr><td><code>couponAmount</code></td><td><code>CartItem.getProductBasedCouponAmount()</code></td><td>Sum of the coupon discounts on the line.</td></tr>
+      <tr><td><code>discounts[]</code></td><td><code>CartItem.getDiscounts()</code></td><td><code>{ id, discountedAmount }</code> per entry. A <code>displayName</code> is added when the manual discount name flag is on.</td></tr>
+      <tr><td><code>salePrice</code></td><td><code>CartItem.getSalePrice($displayTaxInclusive)</code>, from <code>price</code> and <code>getProductBasedDiscount()</code></td><td><code>getPrice($displayTaxInclusive) &minus; (discount without coupons &divide; quantity)</code></td></tr>
+      <tr><td><code>extendedSalePrice</code></td><td><code>CartItem.getExtendedSalePrice($displayTaxInclusive)</code></td><td><code>getSalePrice(...) &times; quantity</code></td></tr>
+      <tr><td><code>comparisonPrice</code></td><td><code>listPrice</code>, <code>salePrice</code>, <code>discountAmount</code>, <code>CartItem.arePricesEnteredTaxInclusive()</code>, <code>displayTaxInclusive</code></td><td><code>listPrice</code> when <code>discountAmount</code> is non-zero and <code>pricesEnteredTaxInclusive == displayTaxInclusive</code>. Otherwise <code>salePrice</code>, so there is no strike-through.</td></tr>
+      <tr><td><code>extendedComparisonPrice</code></td><td><code>extendedListPrice</code>, <code>extendedSalePrice</code>, same inputs</td><td><code>extendedListPrice</code> or <code>extendedSalePrice</code>, by the same rule.</td></tr>
+      <tr><td><code>isCustomPrice</code></td><td><code>CartItem.isCustomPrice()</code></td><td>Copied.</td></tr>
+      <tr class="grp"><td colspan="3">Cart (<code>checkout.cart</code>)</td></tr>
+      <tr><td><code>cart.baseAmount</code></td><td><code>Cart.getBaseSubTotal()</code></td><td>Copied, then rounded.</td></tr>
+      <tr><td><code>cart.discountAmount</code></td><td><code>Cart.getDiscountAmountWithoutProductBasedDiscounts()</code></td><td>Copied. With <code>TAX-2513.convert_discount_amounts_to_tax_display_treatment</code> on, converted to the display tax treatment. Rounded.</td></tr>
+      <tr><td><code>cart.cartAmount</code></td><td><code>Cart.getDiscountedSubTotal($displayTaxInclusive)</code></td><td>Copied. Not rounded in the transformer.</td></tr>
+      <tr><td><code>cart.discounts[]</code></td><td>Each visible item's <code>getDiscountAmountTotal()</code></td><td><code>{ id, discountedAmount }</code> per item. Coupons are included.</td></tr>
+      <tr class="grp"><td colspan="3">Checkout</td></tr>
+      <tr><td><code>subtotal</code></td><td><code>Cart.getSubTotalLessProductBasedDiscounts($displayTaxInclusive)</code></td><td>Copied, then rounded.</td></tr>
+      <tr><td><code>grandTotal</code></td><td><code>Cart.getGrandTotal()</code></td><td>Copied, then rounded.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted"><strong>Custom items</strong> return only <code>listPrice</code> and <code>extendedListPrice</code>, from <code>basePrice</code>. <strong>Gift certificates</strong>, shipping, handling, wrapping and <code>taxTotal</code> are not covered.</p>
 
   <p><strong>Example.</strong> A variant has a catalog <code>calculated_price</code> of $50.00 and quantity 2. A promotion takes $10.00 off the line. Prices are entered and displayed tax exclusive.</p>
   <div class="card-table"><table>
     <thead><tr><th><code>listPrice</code></th><th><code>extendedListPrice</code></th><th><code>discountAmount</code></th><th><code>salePrice</code></th><th><code>extendedSalePrice</code></th><th><code>comparisonPrice</code></th></tr></thead>
     <tbody><tr><td>50.00</td><td>100.00</td><td>10.00</td><td>45.00 (50 &minus; 10 &divide; 2)</td><td>90.00</td><td>50.00 (struck through)</td></tr></tbody>
   </table></div>
-
-  <h4 class="sub">Cart and checkout totals</h4>
-  <div class="card-table f"><table>
-    <thead><tr><th>Field</th><th>Concept</th><th>Logic</th></tr></thead>
-    <tbody>
-      <tr><td><code>cart.baseAmount</code></td><td>Cart total before any discount</td><td><code>getBaseSubTotal</code>: the sum over visible items of the item's <em>calculation total</em>. That is the tax estimate's amount for the line, inclusive or exclusive by display setting (<code>applyCalculationTotals</code>, flag <code>TAX-2763.set_calculation_total</code>), or <code>listPrice &times; quantity</code> when no calculation total is set (flag off, or no tax estimate).</td></tr>
-      <tr><td><code>cart.discountAmount</code></td><td>Order-level discounts only</td><td>The cart's total discount minus all product-based discounts. Converted to the display tax treatment when <code>TAX-2513.convert_discount_amounts_to_tax_display_treatment</code> is on.</td></tr>
-      <tr><td><code>cart.cartAmount</code></td><td>Cart total after all discounts</td><td><code>getDiscountedSubTotal(displayTaxInclusive)</code>: the sum of each item's discounted total</td></tr>
-      <tr><td><code>cart.discounts[]</code></td><td>Discount per line</td><td><code>{ id, discountedAmount }</code> from <code>getDiscountAmountTotal()</code>, which includes coupons</td></tr>
-      <tr><td><code>checkout.subtotal</code></td><td>Items subtotal shown at checkout</td><td><code>getSubTotal(includingTax)</code> minus product-based discounts, where the subtotal is the sum of item totals</td></tr>
-      <tr><td><code>checkout.grandTotal</code></td><td>Amount to pay</td><td>Discounted item subtotal (tax inclusive) + gift wrapping + shipping + handling + fees &minus; gift certificates, never below 0</td></tr>
-    </tbody>
-  </table></div>
-  <p class="small muted">Shipping, handling, wrapping, <code>taxTotal</code> and the per-discount totals on the checkout object are not traced here.</p>
 
   <div class="callout amber"><strong>Not verified.</strong> I did not run a cart through either path, so I have not checked that the two paths return the same price for the same cart. <code>PriceAssignmentServiceCartPricingTest</code> covers the flag-on mapping only. The add-to-cart hop from Storefront, Manual Order, a live response from the Checkout API (the field logic was read from the transformers, not called), and where <code>GetCartPricing</code> is called from outside bcapp are not traced. The Pricing service side was read from the <code>pricing</code> repo, not run.</div>
   <p class="small muted">Source, repo <code>bigcommerce</code>: <code>app/Checkout/Cart/CartProjectionService.php</code>, <code>app/Checkout/Cart/Catalog/PriceAssignmentService.php</code>, <code>app/Pricing/{PricingService,SelectionPricingService,CartPricingServiceClient,CartPricingGrpcMapper,PriceListAssignmentService,CatalogPricingService}.php</code>, <code>lib/gRPC/PriceListClient.php</code>, <code>config/Experiments/PricingExperiments.php</code>. Repo <code>pricing</code>: <code>CartPricingService.scala</code>, <code>CartCatalogServiceClient.scala</code>.</p>
