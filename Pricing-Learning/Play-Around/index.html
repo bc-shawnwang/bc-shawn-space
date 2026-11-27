@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Play around</title>
+<style>
+:root{
+  --bg:#10141b;
+  --surface:#171c25;
+  --surface-2:#1c2230;
+  --border:#2a3140;
+  --border-soft:#232a38;
+  --text:#e9e7e0;
+  --muted:#8b93a3;
+  --amber:#e8a33d;
+  --amber-dim:#4a3c22;
+  --amber-bg:rgba(232,163,61,0.13);
+  --violet:#8b7cf0;
+  --blue-bg:rgba(55,138,221,0.14);
+  --blue-text:#7fb4e8;
+  --teal-bg:rgba(29,158,117,0.16);
+  --teal-text:#63d6ab;
+  --red-bg:rgba(226,92,92,0.14);
+  --red-text:#f09a9a;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+body{-webkit-font-smoothing:antialiased;line-height:1.6;}
+main{max-width:920px;margin:0 auto;padding:56px 24px 96px;}
+a{color:var(--amber);}
+a:hover{text-decoration:underline;}
+
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+.eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--violet);display:inline-block;}
+.eyebrow a{color:var(--muted);text-decoration:none;}
+.eyebrow a:hover{color:var(--amber);}
+.eyebrow .sep{opacity:.5;}
+
+h1{font-size:clamp(26px,3.8vw,36px);line-height:1.18;letter-spacing:-0.01em;margin:0 0 12px;}
+h2{font-size:20px;font-weight:650;margin:56px 0 6px;scroll-margin-top:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+h3{font-size:15.5px;font-weight:650;margin:30px 0 8px;}
+h4{font-size:13px;font-weight:650;margin:22px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+p{margin:0 0 14px;}
+p.lede{color:var(--muted);margin:0 0 28px;max-width:680px;font-size:15px;}
+.muted{color:var(--muted);}
+.small{font-size:12.5px;}
+hr.sep{border:none;border-top:1px solid var(--border);margin:44px 0 0;}
+
+code{background:var(--surface-2);padding:1px 6px;border-radius:4px;font-size:12.5px;font-family:var(--mono);border:1px solid var(--border);word-break:break-word;}
+pre.code{background:#0a0d12;color:#c9d1d9;border-radius:8px;padding:14px 16px;font-size:12px;line-height:1.55;font-family:var(--mono);overflow-x:auto;margin:10px 0 18px;border:1px solid var(--border);white-space:pre;}
+pre.code .k{color:#79c0ff;}      /* keys / types */
+pre.code .s{color:#a5d6a7;}      /* strings */
+pre.code .n{color:#ffa657;}      /* numbers */
+pre.code .c{color:#6e7681;}      /* comments */
+pre.code .f{color:#d2a8ff;}      /* fields / fragments */
+.file{display:block;font-family:var(--mono);font-size:11.5px;color:var(--muted);margin:14px 0 -4px;}
+ul,ol{padding-left:20px;margin:0 0 14px;}
+li{margin-bottom:8px;}
+
+/* badges */
+.badge{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:2px 9px;border-radius:999px;border:1px solid var(--border);color:var(--muted);vertical-align:middle;white-space:nowrap;}
+.badge.wip{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-dim);}
+.badge.live{background:var(--teal-bg);color:var(--teal-text);border-color:rgba(29,158,117,.35);}
+.badge.unverified{background:var(--red-bg);color:var(--red-text);border-color:rgba(226,92,92,.3);}
+
+/* callouts */
+.callout{border-radius:8px;padding:12px 16px;font-size:13.5px;margin:0 0 14px;border:1px solid transparent;}
+.callout.blue{background:var(--blue-bg);color:var(--blue-text);}
+.callout.teal{background:var(--teal-bg);color:var(--teal-text);}
+.callout.amber{background:var(--amber-bg);color:var(--amber);}
+.callout.red{background:var(--red-bg);color:var(--red-text);}
+.callout code{background:rgba(0,0,0,.25);border-color:rgba(255,255,255,.1);color:inherit;}
+.callout strong{color:inherit;}
+
+/* tables */
+.card-table{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow-x:auto;margin:10px 0 20px;}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px;}
+th,td{padding:10px 12px;text-align:left;border-top:1px solid var(--border);vertical-align:top;}
+thead th{border-top:none;font-weight:600;background:var(--surface-2);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+td.t{white-space:nowrap;}
+tr.hl td{background:rgba(232,163,61,.07);}
+
+/* definition grid */
+dl.terms{display:grid;grid-template-columns:minmax(150px,230px) 1fr;gap:0;margin:10px 0 20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+dl.terms dt,dl.terms dd{padding:11px 14px;border-top:1px solid var(--border);margin:0;font-size:13.5px;}
+dl.terms dt:first-of-type,dl.terms dd:first-of-type{border-top:none;}
+dl.terms dt{font-weight:600;color:var(--text);background:var(--surface-2);}
+dl.terms dd{color:var(--text);}
+dl.terms dd .muted{font-size:12.5px;}
+@media(max-width:640px){dl.terms{grid-template-columns:1fr;}dl.terms dt{border-top:1px solid var(--border);}dl.terms dd{border-top:none;}}
+
+/* group headings inside terms */
+.termgroup{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);margin:28px 0 -4px;}
+
+/* page cards (sub page links) */
+ul.pages{list-style:none;margin:0;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
+li.page{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:0;transition:border-color .15s ease, background .15s ease;}
+li.page:hover{border-color:var(--amber-dim);background:var(--surface-2);}
+li.page a{display:block;color:var(--text);font-weight:600;font-size:16px;text-decoration:none;}
+li.page a:hover{color:var(--amber);}
+li.page .desc{color:var(--muted);font-size:13.5px;margin-top:4px;}
+
+/* table of contents */
+nav.toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin:0 0 8px;}
+nav.toc .title{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:28px;}
+nav.toc li{margin-bottom:5px;font-size:13.5px;break-inside:avoid;}
+nav.toc a{text-decoration:none;}
+@media(max-width:640px){nav.toc ol{columns:1;}}
+
+/* animated request chain */
+.flow-caption{color:var(--muted);font-size:12.5px;margin:0 0 10px;}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:6px 0 20px;}
+.flow .node{flex:1 1 150px;min-width:140px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;background:var(--surface);animation:nodePulse 8s infinite ease;}
+.flow .node small{display:block;color:var(--muted);font-size:11px;margin-top:3px;}
+.flow .node b{font-weight:600;}
+.flow .node .tag{font-family:var(--mono);font-size:10.5px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.08em;}
+.flow .node:nth-child(1){animation-delay:0s;}
+.flow .node:nth-child(2){animation-delay:.9s;}
+.flow .node:nth-child(3){animation-delay:1.8s;}
+.flow .node:nth-child(4){animation-delay:2.7s;}
+.flow .node:nth-child(5){animation-delay:3.6s;}
+.flow .node:nth-child(6){animation-delay:4.5s;}
+.flow .node:nth-child(7){animation-delay:5.4s;}
+.flow .node.grpc{--c:29,158,117;}
+.flow .node.http{--c:55,138,221;}
+.flow .node.gql{--c:139,124,240;}
+.flow .node{--c:232,163,61;}
+@keyframes nodePulse{
+  0%,2%{box-shadow:none;border-color:var(--border);}
+  6%{box-shadow:0 0 0 2px rgba(var(--c),.5);border-color:rgb(var(--c));}
+  16%,100%{box-shadow:none;border-color:var(--border);}
+}
+@media(prefers-reduced-motion:reduce){.flow .node{animation:none;}html{scroll-behavior:auto;}}
+
+/* interactive switcher */
+.switcher{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:10px 0 20px;}
+.switcher .label{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.seg{display:inline-flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.seg button{font:inherit;font-size:12.5px;font-family:var(--mono);background:var(--surface-2);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;}
+.seg button:hover{color:var(--text);}
+.seg button[aria-pressed="true"]{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-dim);}
+.out{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;}
+.out .cell{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:10px 12px;font-size:13px;}
+.out .cell .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:3px;}
+.out .cell.yes{border-color:rgba(29,158,117,.45);}
+.out .cell.no{opacity:.6;}
+.out .note{grid-column:1/-1;font-size:13px;color:var(--muted);}
+.items{margin-top:12px;}
+.items .row{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:12.5px;}
+.items .row .alias{font-family:var(--mono);color:var(--violet);min-width:190px;}
+.items .row .item{font-family:var(--mono);color:#c9d1d9;}
+.items .row.dedup{opacity:.55;}
+
+footer{margin-top:64px;color:var(--muted);font-family:var(--mono);font-size:12px;display:flex;gap:18px;flex-wrap:wrap;}
+footer a{color:var(--muted);}
+footer a:hover{color:var(--amber);}
+
+.card-table.f td:first-child code{white-space:normal;overflow-wrap:anywhere;}
+.bar{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin:0 0 14px;}
+.chip{font:inherit;font-size:12.5px;font-family:var(--mono);background:var(--surface-2);color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:5px 13px;cursor:pointer;}
+.chip:hover{color:var(--text);}
+.chip[aria-pressed="true"]{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-dim);}
+.sp{flex:1;}
+.btn{font:inherit;font-size:12.5px;font-family:var(--mono);background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;}
+.btn:hover{border-color:var(--amber-dim);color:var(--amber);}
+.prog{font-family:var(--mono);font-size:12px;color:var(--muted);}
+.prog b{color:var(--amber);}
+details.task{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin:0 0 10px;scroll-margin-top:16px;}
+details.task[open]{border-color:var(--amber-dim);}
+details.task summary{list-style:none;cursor:pointer;display:flex;gap:12px;align-items:center;padding:12px 16px;}
+details.task summary::-webkit-details-marker{display:none;}
+details.task summary::after{content:"+";margin-left:auto;font-family:var(--mono);color:var(--muted);}
+details.task[open] summary::after{content:"\2212";}
+.num{font-family:var(--mono);color:var(--amber);font-weight:600;min-width:22px;}
+.ttl{font-weight:600;font-size:15px;}
+.cat{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;padding:2px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);border:1px solid var(--border);white-space:nowrap;}
+.done-badge{display:none;color:var(--teal-text);font-weight:700;}
+details.task.done .done-badge{display:inline;}
+details.task.done{border-color:rgba(29,158,117,.5);}
+.tb{padding:0 18px 14px;border-top:1px solid var(--border);}
+.tb h4{margin:16px 0 6px;}
+.tb .goal{margin:12px 0 0;}
+.tb ol li,.tb ul li{margin-bottom:7px;}
+.tb pre.code{margin:8px 0 4px;}
+.tb .refs{font-size:12.5px;color:var(--muted);margin:12px 0 8px;}
+.mark{display:inline-flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);cursor:pointer;}
+.mark input{accent-color:#e8a33d;}
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow"><span class="dot"></span><a href="../../index.html">bc-shawn-space</a><span class="sep">/</span><a href="../index.html">Pricing Learning</a><span class="sep">/</span>Play around</div>
+  <h1>Play around</h1>
+  <p class="lede">Eighteen hands-on tasks for the pricing domain. Each one has the setup, the steps and what you should see, with a link back to the doc that explains why. Do them in order the first time: later tasks reuse the data from earlier ones.</p>
+  <div class="callout blue"><strong>Before you start:</strong> the tasks are written from the docs, which were read from source and not all run against a store. Where I did not know the exact control panel screen, I give the REST API call instead. If what you see differs from the expected result, that is worth writing down: it is either a gap in the docs or a real difference between two implementations.</div>
+
+  <h2 id="prep">Preparation</h2>
+  <ul>
+    <li><strong>A dev store</strong> on the cloud dev VM, with a store hash and an API token that can manage products, price lists and customer groups. The REST calls below use <code>https://api.bigcommerce.com/stores/{store_hash}/v3/...</code> with the <code>X-Auth-Token</code> header.</li>
+    <li><strong>One currency.</strong> Use the store's default currency so the exchange rate is 1 and the numbers in the tasks add up.</li>
+    <li><strong>Test data.</strong> One product with two variants (S and M, both 50.00), one simple product at 50.00, and three customer groups (Play A, Play B, Play C). The tasks name them where needed.</li>
+    <li><strong>Experiments</strong> are per store in LaunchDarkly. Ask for them to be set for your store, or set them in the dev environment:</li>
+  </ul>
+  <div class="card-table f"><table>
+    <colgroup><col style="width:42%"><col style="width:46%"><col style="width:12%"></colgroup>
+    <thead><tr><th>Experiment</th><th>What it does</th><th>Tasks</th></tr></thead>
+    <tbody><tr><td><code>PROJECT-5992.Feature_price_lists_tax_inclusive_exclusive</code></td><td>Inclusive and exclusive price lists. Also the first of the two cart experiments.</td><td>8, 15, 16</td></tr><tr><td><code>PROJECT-8948.hydrate_cart_prices_from_pricing_service</code></td><td>Prices the cart through GetCartPricing. Only read when the first is on.</td><td>15, 16</td></tr><tr><td><code>STRF-14727.Prices_from_gql_for_categories</code></td><td>Category pages get prices from GraphQL. A string variation: set it to enable.</td><td>11, 13</td></tr><tr><td><code>STRF-14355.Migrate_price_data_to_gql_for_product_details</code></td><td>Product pages get prices from GraphQL. A string variation.</td><td>12</td></tr></tbody>
+  </table></div>
+  <div class="callout amber"><strong>Caches.</strong> After you change setup, results can lag: price list assignments (<code>alternative-pricing-cache</code>), catalog data, store settings and tax settings are cached, and bcapp caches product page responses for 20 seconds. If a number does not change, wait or restart the service before you suspect the code. See <a href="../Understand-Pricing-Service/CodeStructure/index.html#cross">Code Structure, 7. Cross-cutting pieces</a>.</div>
+
+  <h2 id="tasks">Tasks</h2>
+  <div class="bar"><button type="button" class="chip" data-f="all" aria-pressed="true">All (18)</button><button type="button" class="chip" data-f="Environment" aria-pressed="false">Environment (2)</button><button type="button" class="chip" data-f="Data setup" aria-pressed="false">Data setup (8)</button><button type="button" class="chip" data-f="Storefront" aria-pressed="false">Storefront (3)</button><button type="button" class="chip" data-f="Cart and checkout" aria-pressed="false">Cart and checkout (4)</button><button type="button" class="chip" data-f="Events" aria-pressed="false">Events (1)</button><span class="sp"></span><span class="prog" id="prog">Done <b id="pg">0</b>/18</span><button class="btn" id="open-all" type="button">Expand all</button><button class="btn" id="close-all" type="button">Collapse all</button></div>
+<details class="task" id="t1" data-cat="Environment"><summary><span class="num">1</span><span class="ttl">Run the service locally and call the estimate RPC</span><span class="cat">Environment</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> Get the Pricing service running against a dev store and see a real <code>ListEstimatedTaxProductPrices</code> response.</p><h4>You need</h4><ul><li>A cloud dev VM store (the service reads that store's database)</li><li>A GitHub token with access to the bigcommerce packages</li><li><code>grpcurl</code> or any gRPC client</li></ul><h4>Steps</h4><ol><li>In the <code>pricing</code> repo, run <code>cp .env-example .env</code> and fill <code>GITHUB_TOKEN</code> and <code>GITHUB_USER</code>. Dependencies are resolved from GitHub Packages, so the build fails without them.</li><li>Start <code>sbt</code>. At the root project run <code>bgRun</code> and choose <code>pricing-rpc</code> at the prompt (the other choice is the event listener).</li><li>Read the startup log for the gRPC port. The container config uses 9501. Use <code>bgList</code> to see what is running and <code>bgStop</code> to stop it.</li><li>Pick a product ID from your store and call the RPC (protos come from the <code>interfaces</code> repo, and enum values use the proto names such as <code>USD</code> and <code>US</code>):<pre class="code">grpcurl -plaintext \
+  -import-path ~/Projects/interfaces/proto \
+  -proto bigcommerce/rpc/pricing/TaxPricingPrototype.proto \
+  -d '{
+    "store_id": 1234,
+    "requested_items": [ { "product_id": 112 } ],
+    "currency_code": "USD",
+    "customer_group_id": 0,
+    "channel_id": 1,
+    "currency_decimal_precision": 2,
+    "country_code": "US"
+  }' \
+  localhost:&lt;grpc-port&gt; \
+  bigcommerce.rpc.pricing.TaxPricingPrototype/ListEstimatedTaxProductPrices</pre></li><li>Optional: run the unit tests with <code>./script/test</code>, or one module from inside sbt, for example <code>price-lists / test</code>. Functional tests need <code>FUN_TESTS_STORE_ID</code> set in <code>.env</code>.</li></ol><h4>Expected</h4><ul class="exp"><li>One <code>product_prices</code> entry for the product, in request order, with <code>tax_entered_as</code> and <code>prices</code> (<code>calculated_price</code>, <code>price</code> and so on, each as <code>as_entered</code>, <code>tax_inclusive</code>, <code>tax_exclusive</code>).</li><li>Without <code>exchange_rate</code> the service looks the rate up from the currency projection in Redis, and takes the decimals from it when your precision is 0.</li><li>If startup fails with a Redis error: the service connects to persistence Redis at boot and throws if it cannot. Check the Redis settings in <code>.env</code>.</li></ul><p class="refs">Reference: <a href="../Understand-Pricing-Service/CodeStructure/index.html#processes">Code Structure, 2. One jar, two processes</a> &middot; <a href="../Understand-Pricing-Service/CodeStructure/index.html#build">Code Structure, 8. Build and tests</a> &middot; <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#io">Estimate RPC, 1. Request and response</a></p><label class="mark"><input type="checkbox" data-done="1"> Mark as done</label></div></details>
+<details class="task" id="t2" data-cat="Environment"><summary><span class="num">2</span><span class="ttl">Debug a price with the calculation data</span><span class="cat">Environment</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> See which branch, settings and prices the service used for one item, without attaching a debugger.</p><h4>You need</h4><ul><li>The service running (task 1)</li></ul><h4>Steps</h4><ol><li>Repeat the call from task 1 with <code>"include_calculation_data": true</code> added to the request.</li><li>Read the <code>calculation_data</code> field of the response. It is a JSON string, so pipe it through <code>jq</code> or paste it into a formatter.</li><li>Find the pricing mode, the price list assignment, the prices after resolving, and the calculation method used for your item.</li><li>Change something in the request (add <code>variant_id</code>, then add <code>option_values</code>) and compare which calculation method changes.</li></ol><h4>Expected</h4><ul class="exp"><li><code>calculation_data</code> is filled only when you ask for it, and holds the data, flags and settings used to calculate the prices.</li><li>A request with only a product ID, a product ID with a variant, and a product with options that resolve to one variant should end in different <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#branches">branches</a>.</li><li>It is meant for comparing the Pricing service with bcapp. The proto says it is not a stable API.</li></ul><p class="refs">Reference: <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#io">Estimate RPC, 1. Request and response</a> &middot; <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#branches">Estimate RPC, 6. The five calculation branches</a></p><label class="mark"><input type="checkbox" data-done="2"> Mark as done</label></div></details>
+<details class="task" id="t3" data-cat="Data setup"><summary><span class="num">3</span><span class="ttl">Plain catalog price (mode None)</span><span class="cat">Data setup</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> See what the service returns when nothing replaces or lowers the catalog price.</p><h4>You need</h4><ul><li>A simple product with price 50.00 and retail price 75.00</li><li>A customer group with no price list and no discounts (group 0 works)</li></ul><h4>Steps</h4><ol><li>Create or edit the product: price 50.00, retail price 75.00, no sale price. Use a store with one currency so the exchange rate is 1.</li><li>Call the estimate RPC for the product with <code>customer_group_id: 0</code>.</li><li>Add a sale price of 45.00 to the product and call again.</li></ol><h4>Expected</h4><ul class="exp"><li>First call: <code>calculated_price</code> 50.00, <code>price</code> 50.00, <code>retail_price</code> 75.00, and <code>saved</code> 25.00 (retail minus calculated).</li><li>After the sale price: <code>calculated_price</code> 45.00 (the sale applied), <code>sale_price</code> 45.00, <code>price</code> still 50.00, and <code>saved</code> 30.00.</li><li>If the tax zone for your <code>country_code</code> has no tax, <code>tax_inclusive</code> equals <code>tax_exclusive</code>. One of the two always equals <code>as_entered</code>.</li><li>If a call shows the old price, wait: catalog data can be cached (<code>catalog-price-data</code>), and so can store settings.</li></ul><p class="refs">Reference: <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#mode">Estimate RPC, 4. Which pricing mode applies</a> &middot; <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#final">Estimate RPC, 8. To the final response</a> &middot; <a href="../Understand-Pricing-Service/index.html#build-up">Understand Pricing Service, Watch a price build up</a></p><label class="mark"><input type="checkbox" data-done="3"> Mark as done</label></div></details>
+<details class="task" id="t4" data-cat="Data setup"><summary><span class="num">4</span><span class="ttl">Option price rule</span><span class="cat">Data setup</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> Watch a rule change <code>calculated_price</code> and nothing else.</p><h4>You need</h4><ul><li>A product with a size option and two variants (S at 50.00, M at 50.00)</li><li>A relative price adjustment of +5.00 on the option value M</li></ul><h4>Steps</h4><ol><li>Add the price adjustment to the M option value (the docs call these option set rules and product rules).</li><li>Call the estimate RPC with <code>option_values</code> that resolve to variant S, then to variant M.</li><li>Call again with only the product ID and note <code>price_range</code>.</li></ol><h4>Expected</h4><ul class="exp"><li>S: <code>calculated_price</code> 50.00. M: <code>calculated_price</code> 55.00.</li><li><code>price</code>, <code>sale_price</code> and <code>retail_price</code> do not change. Only <code>calculated_price</code> carries the rule.</li><li><code>price_range</code> is built from the variants' prices and does not include the rule, so it can disagree with M's <code>calculated_price</code>.</li></ul><p class="refs">Reference: <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#adjust">Estimate RPC, 7. What changes calculated_price</a> &middot; <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#branches">Estimate RPC, 6. The five calculation branches</a></p><label class="mark"><input type="checkbox" data-done="4"> Mark as done</label></div></details>
+<details class="task" id="t5" data-cat="Data setup"><summary><span class="num">5</span><span class="ttl">Customer group discounts: which one wins</span><span class="cat">Data setup</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> See the order the service picks a discount in, and that it only touches <code>calculated_price</code>.</p><h4>You need</h4><ul><li>A customer group (call it Play A) with no price list</li><li>A product with price 50.00 in one category</li></ul><h4>Steps</h4><ol><li>Give Play A a 10% discount on all products. Call the estimate RPC with Play A's group ID.</li><li>Add a 20% discount on the product's category and call again.</li><li>Add a 5% discount on the product itself and call again.</li><li>Call once more with <code>customer_group_id: 0</code>.</li></ol><h4>Expected</h4><ul class="exp"><li>10% on everything: <code>calculated_price</code> 45.00.</li><li>With the category discount added: 40.00. A category discount beats the sitewide one.</li><li>With the product discount added: 47.50. The product's own discount wins, even though it is the smallest.</li><li>Group 0: 50.00. <code>price</code>, <code>sale_price</code> and <code>retail_price</code> never change, and the range ends get the discount.</li><li>The discount is applied after option rules. On variant M of the task 4 product (with its +5.00 rule), the 10% sitewide discount gives (50.00 + 5.00) &times; 0.9 = 49.50.</li></ul><p class="refs">Reference: <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#adjust">Estimate RPC, 7. What changes calculated_price</a> &middot; <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#mode">Estimate RPC, 4. Which pricing mode applies</a></p><label class="mark"><input type="checkbox" data-done="5"> Mark as done</label></div></details>
+<details class="task" id="t6" data-cat="Data setup"><summary><span class="num">6</span><span class="ttl">A global price list</span><span class="cat">Data setup</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> See a price list record replace the catalog price, and what happens to a variant with no record.</p><h4>You need</h4><ul><li>The product from task 4, and customer group Play A from task 5</li><li>A price list whose tax setting is <code>use global</code></li></ul><h4>Steps</h4><ol><li>Create a price list: <code>POST /v3/pricelists</code> with a name and <code>active: true</code>.</li><li>Add a record for variant S: <code>PUT /v3/pricelists/{id}/records</code> with <code>variant_id</code>, <code>currency</code> and <code>price</code> 34.00.</li><li>Assign the list to Play A and channel 1: <code>POST /v3/pricelists/assignments</code>.</li><li>Call the estimate RPC for Play A with variant S, then variant M.</li></ol><h4>Expected</h4><ul class="exp"><li>S: <code>calculated_price</code> 34.00. The record replaces the catalog value, and the group's discounts from task 5 are ignored: a price list and discounts never apply together.</li><li>M has no record on a global list, so it keeps its catalog price (55.00 with the rule from task 4).</li><li><code>tax_entered_as</code> follows the store's setting, because the list is global.</li><li>Call again for group 0. It should still get catalog prices: only the assigned group sees the list.</li></ul><p class="refs">Reference: <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#override">Estimate RPC, 5. What overrides what</a> &middot; <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#mode">Estimate RPC, 4. Which pricing mode applies</a></p><label class="mark"><input type="checkbox" data-done="6"> Mark as done</label></div></details>
+<details class="task" id="t7" data-cat="Data setup"><summary><span class="num">7</span><span class="ttl">Which pricing mode wins</span><span class="cat">Data setup</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> Check the precedence rules by building three shoppers.</p><h4>You need</h4><ul><li>Tasks 5 and 6 done</li><li>Customer groups Play A, Play B and Play C</li></ul><h4>Steps</h4><ol><li>Play A already has a price list and discounts. Call the RPC for Play A.</li><li>Give Play B discounts only, and assign a second price list to customer group 0 on channel 1 (a channel-wide list). Call for Play B.</li><li>Leave Play C with nothing. Call for Play C, and for group 0.</li><li>For each call, read the mode from <code>calculation_data</code> (task 2).</li></ol><h4>Expected</h4><ul class="exp"><li>Play A: PriceList. A group's own list comes first.</li><li>Play B: Discounts. The channel-wide list applies only when the group has no discounts.</li><li>Play C: the channel-wide list (PriceList). Group 0: PriceList too, as the group has no discounts.</li><li>Remove the channel-wide assignment and Play C falls to None: plain catalog prices.</li></ul><p class="refs">Reference: <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#mode">Estimate RPC, 4. Which pricing mode applies</a></p><label class="mark"><input type="checkbox" data-done="7"> Mark as done</label></div></details>
+<details class="task" id="t8" data-cat="Data setup"><summary><span class="num">8</span><span class="ttl">An inclusive or exclusive price list</span><span class="cat">Data setup</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> See that a list with its own tax setting never falls back to catalog prices.</p><h4>You need</h4><ul><li>The experiment <code>PROJECT-5992.Feature_price_lists_tax_inclusive_exclusive</code> on for your store</li><li>Catalog v3 enabled on the store</li></ul><h4>Steps</h4><ol><li>Create a price list with prices entered <strong>exclusive</strong> of tax (the setting <code>prices_entered_with_tax</code>, offered when the experiment is on). Add a record for variant S only, and assign it to Play A.</li><li>Call the estimate RPC for variant M with <code>enable_null_prices_in_response</code> false, then true.</li><li>Check <code>tax_entered_as</code> on the response.</li></ol><h4>Expected</h4><ul class="exp"><li>M has no record, so it is not priced from the catalog. With the flag false the prices come back as zero. With it true they come back null.</li><li><code>tax_entered_as</code> is <code>ENTERED_EXCLUSIVE</code>, whatever the store's own setting says.</li><li>If the list shows as global instead, check the experiment: with it off, every list is forced to use global.</li></ul><p class="refs">Reference: <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#io">Estimate RPC, 1. Request and response</a> &middot; <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#override">Estimate RPC, 5. What overrides what</a> &middot; <a href="../Understand-Pricing-Service/GetCartPricing/index.html#base">GetCartPricing, 4. Mode, price lists and base prices</a></p><label class="mark"><input type="checkbox" data-done="8"> Mark as done</label></div></details>
+<details class="task" id="t9" data-cat="Data setup"><summary><span class="num">9</span><span class="ttl">Tax: inclusive and exclusive amounts</span><span class="cat">Data setup</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> Watch tax add amounts without changing the entered price.</p><h4>You need</h4><ul><li>A tax zone with a 10% rate for your test country, on the product's tax class</li><li>A plain product with price 50.00</li></ul><h4>Steps</h4><ol><li>With the store set to enter prices exclusive of tax, call the estimate RPC for a shopper in that country (<code>country_code</code>) and a customer group with no price list.</li><li>Switch the store's catalog setting to enter prices inclusive of tax. Wait for the settings cache to expire, or restart the service, and call again.</li><li>Call with a country outside any tax zone.</li></ol><h4>Expected</h4><ul class="exp"><li>Exclusive: <code>as_entered</code> 50.00, <code>tax_exclusive</code> 50.00, <code>tax_inclusive</code> 55.00.</li><li>Inclusive: <code>as_entered</code> 50.00, <code>tax_inclusive</code> 50.00, <code>tax_exclusive</code> 45.45. The same number now means something else.</li><li>Outside any zone, the store's rest of the world zone is used. If it has no tax, the three amounts are equal.</li><li>Every price line (<code>price</code>, <code>retail_price</code>, range ends, monetary bulk tiers) gets its own three amounts. <code>saved</code> is computed after tax.</li></ul><p class="refs">Reference: <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#final">Estimate RPC, 8. To the final response</a> &middot; <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#io">Estimate RPC, 1. Request and response</a></p><label class="mark"><input type="checkbox" data-done="9"> Mark as done</label></div></details>
+<details class="task" id="t10" data-cat="Data setup"><summary><span class="num">10</span><span class="ttl">Bulk pricing tiers in the estimate RPC</span><span class="cat">Data setup</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> See that the estimate returns tiers as data and never applies them.</p><h4>You need</h4><ul><li>A product with price 50.00</li></ul><h4>Steps</h4><ol><li>Add bulk pricing rules to the product: <code>POST /v3/catalog/products/{id}/bulk-pricing-rules</code>, for example 5 or more units at 10% off.</li><li>Call the estimate RPC for the product and read <code>bulk_tiers</code> and <code>calculated_price</code>.</li></ol><h4>Expected</h4><ul class="exp"><li><code>bulk_tiers</code> lists the tier with <code>quantity_min</code> 5 and a <code>price_change</code>.</li><li><code>calculated_price</code> is still 50.00. The estimate has no quantity, so tiers are only data for the client.</li><li>A percentage tier has no tax amounts. A monetary tier gets <code>tax_inclusive</code> and <code>tax_exclusive</code>.</li><li>You will see the tier applied in the cart in task 16.</li></ul><p class="refs">Reference: <a href="../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#branches">Estimate RPC, 6. The five calculation branches</a> &middot; <a href="../Understand-Pricing-Service/GetCartPricing/index.html#diff">GetCartPricing, 9. Compared with the estimate RPC</a></p><label class="mark"><input type="checkbox" data-done="10"> Mark as done</label></div></details>
+<details class="task" id="t11" data-cat="Storefront"><summary><span class="num">11</span><span class="ttl">Category page price shapes</span><span class="cat">Storefront</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> Match the three price shapes on a category page to the fields behind them.</p><h4>You need</h4><ul><li>The flag <code>STRF-14727.Prices_from_gql_for_categories</code> set to the string <code>enable</code> for your store (a literal true does not count)</li><li>Three products in one category: a plain one, one with a sale price, one with variants at different prices</li></ul><h4>Steps</h4><ol><li>Open the category page on the storefront.</li><li>Inspect the price block of each product card.</li><li>Change the store's tax display between inclusive and exclusive and reload.</li></ol><h4>Expected</h4><ul class="exp"><li>Plain product: one price, printed from <code>price.with_tax</code> or <code>price.without_tax</code>, depending on the tax display.</li><li>Sale product: a Was price (<code>price.non_sale_price_with_tax</code>, the base price) and a Now price (<code>price.with_tax</code>, the calculated price). Was only shows because it is higher than Now.</li><li>Variants at different prices: a range, from <code>price.price_range.min</code> and <code>max</code>, when the theme's <code>price_ranges</code> setting is on.</li><li>The numbers should match what the estimate RPC returns for the same shopper (task 3).</li></ul><p class="refs">Reference: <a href="../Understand-Client-Side/index.html#plp">Understand Client Side, 3. Stencil Storefront PLP</a> &middot; <a href="../Understand-Client-Side/index.html#graphql">Understand Client Side, 1. StorefrontGraphQL</a></p><label class="mark"><input type="checkbox" data-done="11"> Mark as done</label></div></details>
+<details class="task" id="t12" data-cat="Storefront"><summary><span class="num">12</span><span class="ttl">Product page: first paint versus option change</span><span class="cat">Storefront</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> Find out which service prices which moment on a product page.</p><h4>You need</h4><ul><li>The flag <code>STRF-14355.Migrate_price_data_to_gql_for_product_details</code> set to <code>enable</code></li><li>The product from task 4 (with the +5.00 option rule)</li></ul><h4>Steps</h4><ol><li>Open the product page and, in the browser console, read <code>window.BCData.product_attributes.price</code>. This is the first paint, and it comes from the GraphQL price.</li><li>Open the network tab, then change the size option.</li><li>Find the <code>POST /remote/v1/product-attributes/{productId}</code> request and read <code>data.price</code> in its response.</li><li>Compare the two prices for the same selection. Then change the option back and forth quickly.</li></ol><h4>Expected</h4><ul class="exp"><li>The first paint is priced through StorefrontGraphQL, which can reach the Pricing service.</li><li>After an option change the price comes from bcapp, which asks the Pricing service only for the price list and its records and does the maths in PHP. It never calls <code>ListEstimatedTaxProductPrices</code>.</li><li>The two should match. Where they do not, you have found a difference between the two implementations.</li><li>Gotchas: bcapp may cache the whole response for 20 seconds, with a key that has no customer group, channel or currency. Quick changes can also arrive out of order, so the last response to arrive wins.</li></ul><p class="refs">Reference: <a href="../Understand-Client-Side/index.html#product-attributes">Understand Client Side, 2. product-attributes</a> &middot; <a href="../Understand-Client-Side/index.html#pdp">Understand Client Side, 4. Stencil Storefront PDP</a></p><label class="mark"><input type="checkbox" data-done="12"> Mark as done</label></div></details>
+<details class="task" id="t13" data-cat="Storefront"><summary><span class="num">13</span><span class="ttl">Hidden prices</span><span class="cat">Storefront</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> Check that no price is requested when the shopper must not see one.</p><h4>You need</h4><ul><li>The category page flag from task 11</li></ul><h4>Steps</h4><ol><li>Turn on the store setting to hide prices from guests (<code>hidePriceFromGuests</code>).</li><li>Open the category page and a product page as an anonymous visitor.</li><li>Log in as a customer and open the same pages.</li><li>Optionally turn off <code>showProductPrice</code> on one product and look at its card.</li></ol><h4>Expected</h4><ul class="exp"><li>Anonymous: no prices on the cards or the page. The resolver returns an empty response, and the category query does not even add the prices fields.</li><li>Logged in: prices show as before.</li><li>A product with <code>showProductPrice</code> off has no price for anyone.</li></ul><p class="refs">Reference: <a href="../Understand-Client-Side/index.html#graphql">Understand Client Side, 1. StorefrontGraphQL</a> &middot; <a href="../Understand-Client-Side/index.html#plp">Understand Client Side, 3. Stencil Storefront PLP</a></p><label class="mark"><input type="checkbox" data-done="13"> Mark as done</label></div></details>
+<details class="task" id="t14" data-cat="Cart and checkout"><summary><span class="num">14</span><span class="ttl">Read a cart line's price fields</span><span class="cat">Cart and checkout</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> Match every price field of a checkout line item to its formula.</p><h4>You need</h4><ul><li>A plain product with price 50.00</li><li>A way to create a promotion (an automatic 10.00 off the product)</li></ul><h4>Steps</h4><ol><li>Create a cart with two units: <code>POST /api/storefront/carts</code>.</li><li>Read it back: <code>GET /api/storefront/checkouts/{cartId}</code>, and look at <code>cart.lineItems.physicalItems[0]</code>.</li><li>Add the 10.00 promotion and read the checkout again.</li></ol><h4>Expected</h4><ul class="exp"><li>Without a discount: <code>listPrice</code> 50.00, <code>extendedListPrice</code> 100.00, <code>salePrice</code> equal to <code>listPrice</code>, <code>originalPrice</code> 50.00 and no strike-through.</li><li>With the promotion (prices entered and displayed exclusive): <code>discountAmount</code> 10.00 for the line, <code>salePrice</code> 45.00, <code>extendedSalePrice</code> 90.00, and <code>comparisonPrice</code> 50.00 (a strike-through).</li><li><code>salePrice</code> here is the unit price after discounts, not the catalog <code>sale_price</code>.</li><li><code>cart.baseAmount</code> is the cart total before discounts and <code>cart.cartAmount</code> is after them.</li></ul><p class="refs">Reference: <a href="../Understand-Client-Side/index.html#cart-api">Understand Client Side, Prices in the Storefront Checkout API response</a> &middot; <a href="../Understand-Client-Side/index.html#cart">Understand Client Side, 5. Cart / Checkout</a></p><label class="mark"><input type="checkbox" data-done="14"> Mark as done</label></div></details>
+<details class="task" id="t15" data-cat="Cart and checkout"><summary><span class="num">15</span><span class="ttl">Cart lines priced from a price list, and a line with no price</span><span class="cat">Cart and checkout</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> See cart pricing go through <code>GetCartPricing</code>, and what happens to a line with no price.</p><h4>You need</h4><ul><li>Both experiments on for your store: <code>PROJECT-5992</code> and <code>PROJECT-8948.hydrate_cart_prices_from_pricing_service</code></li><li>The exclusive price list from task 8 (a record for S only), assigned to Play A</li><li>The service running locally (task 1) or deployed</li></ul><h4>Steps</h4><ol><li>As a customer in Play A, add variant S and variant M to a cart.</li><li>Read the checkout (<code>GET /api/storefront/checkouts/{cartId}</code>).</li><li>Turn <code>PROJECT-8948</code> off, reload the checkout, and compare.</li><li>Optional: repeat with an inclusive list, and compare the price you entered with the amounts shown.</li></ol><h4>Expected</h4><ul class="exp"><li>Line S is priced from the record. Line M has no record on an exclusive list, so it comes back with no price and bcapp removes it from the cart, silently.</li><li>With the second experiment off, bcapp prices the cart itself in PHP, with two calls to the Pricing service for the price list and its records. The result should be the same, but the docs have not compared the two paths, so note any difference.</li><li>Inclusive list: the service never sets <code>prices_entered_tax_inclusive</code>, so bcapp always receives false. Note whether inclusive prices are treated as exclusive. That is an open question in the docs, so write down what you see.</li></ul><p class="refs">Reference: <a href="../Understand-Pricing-Service/GetCartPricing/index.html#null">GetCartPricing, 8. When a price is null</a> &middot; <a href="../Understand-Pricing-Service/GetCartPricing/index.html#response">GetCartPricing, 7. Response fields</a> &middot; <a href="../Understand-Pricing-Service/GetCartPricing/index.html#open">GetCartPricing, 10. Open questions</a></p><label class="mark"><input type="checkbox" data-done="15"> Mark as done</label></div></details>
+<details class="task" id="t16" data-cat="Cart and checkout"><summary><span class="num">16</span><span class="ttl">Cart-wide bulk tier</span><span class="cat">Cart and checkout</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> See that a tier is chosen from quantities summed over the whole cart.</p><h4>You need</h4><ul><li>The product from task 4 with variants S and M</li><li>A bulk pricing rule on the product: 5 or more units at 10% off</li><li>A price list for Play A with a record for S (task 6), and the cart experiments on</li></ul><h4>Steps</h4><ol><li>As a customer in group 0 (no price list), add S &times; 2 and M &times; 3. Read the line prices from the checkout.</li><li>As Play A, with the price list record on S, add the same quantities. Read the line prices again.</li><li>Give the record on S its own bulk tiers and repeat.</li></ol><h4>Expected</h4><ul class="exp"><li>Group 0: both lines are in the same product, total 5, so both get the 10% tier.</li><li>Play A: S is priced from its record and uses the record's tiers (none until step 3) with its own quantity of 2. M uses the product's catalog tiers with (2 + 3) &minus; 2 = 3, so M gets no tier.</li><li>The tier is applied to the price here, unlike in the estimate RPC (task 10).</li></ul><p class="refs">Reference: <a href="../Understand-Pricing-Service/GetCartPricing/index.html#bulk">GetCartPricing, 5. The bulk tier</a> &middot; <a href="../Understand-Pricing-Service/GetCartPricing/index.html#diff">GetCartPricing, 9. Compared with the estimate RPC</a></p><label class="mark"><input type="checkbox" data-done="16"> Mark as done</label></div></details>
+<details class="task" id="t17" data-cat="Cart and checkout"><summary><span class="num">17</span><span class="ttl">Tax display and the strike-through</span><span class="cat">Cart and checkout</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> See the display side of tax change the checkout fields, and when the strike-through shows.</p><h4>You need</h4><ul><li>A tax zone with a 10% rate</li><li>Prices entered exclusive of tax</li><li>The discount from task 14 on the line</li></ul><h4>Steps</h4><ol><li>Set the tax zone to display prices exclusive of tax. Read the line item in the checkout.</li><li>Change the zone to display prices inclusive of tax and read it again.</li><li>Note <code>isTaxIncluded</code> on the cart, and <code>salePrice</code>, <code>comparisonPrice</code> and <code>discountAmount</code> on the line.</li></ol><h4>Expected</h4><ul class="exp"><li>Exclusive display: <code>comparisonPrice</code> is the list price, a strike-through, because there is a discount and prices are entered the way they are displayed.</li><li>Inclusive display: <code>isTaxIncluded</code> is true and <code>salePrice</code> is read on the inclusive side. <code>comparisonPrice</code> equals <code>salePrice</code>, so no strike-through, because entered and displayed differ.</li><li>The amounts come from the tax estimate bcapp runs on the cart. <code>GetCartPricing</code> itself does no tax.</li></ul><p class="refs">Reference: <a href="../Understand-Client-Side/index.html#cart-api">Understand Client Side, Prices in the Storefront Checkout API response</a> &middot; <a href="../Understand-Pricing-Service/GetCartPricing/index.html#purpose">GetCartPricing, 1. Purpose</a></p><label class="mark"><input type="checkbox" data-done="17"> Mark as done</label></div></details>
+<details class="task" id="t18" data-cat="Events"><summary><span class="num">18</span><span class="ttl">The event listener cleans up price data</span><span class="cat">Events</span><span class="done-badge" aria-hidden="true">&#10003;</span></summary><div class="tb"><p class="goal"><strong>Goal.</strong> Run the second process and see a catalog event remove price records.</p><h4>You need</h4><ul><li>RabbitMQ reachable from your environment (as on the cloud dev VM)</li><li>A price list record for a throw-away product's variant</li></ul><h4>Steps</h4><ol><li>Start the second process: run <code>bgRun</code> at the sbt root and choose the event listener this time.</li><li>Create a throw-away product with a variant, add a price list record for the variant, and give the product a customer group discount.</li><li>Delete the variant, check the price records for it, then delete the product.</li><li>Watch the listener's log. The handler logs each incoming message at debug level, so raise the log level to see them.</li></ol><h4>Expected</h4><ul class="exp"><li>The <code>catalog-events</code> queue delivers a variant deleted event. The listener deletes the price records for that variant.</li><li>A product deleted event deletes the product's price records and its customer group discounts.</li><li>A category deleted event deletes that category's customer group discounts.</li><li>Each message is acknowledged after the work finishes, whether it succeeded or failed.</li></ul><p class="refs">Reference: <a href="../Understand-Pricing-Service/CodeStructure/index.html#processes">Code Structure, 2. One jar, two processes</a> &middot; <a href="../Understand-Pricing-Service/CodeStructure/index.html#paths">Code Structure, 5. Follow a request</a></p><label class="mark"><input type="checkbox" data-done="18"> Mark as done</label></div></details>
+
+  <footer><a href="../index.html">&larr; back to Pricing Learning</a><a href="../../index.html">back to index</a></footer>
+</main>
+<script>
+(function () {
+  var tasks = Array.prototype.slice.call(document.querySelectorAll("details.task"));
+  var KEY = "pricing-play-around-done";
+  var done = {};
+  try { done = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { done = {}; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(done)); } catch (e) {} }
+  function render() {
+    var n = 0;
+    tasks.forEach(function (t, i) {
+      var id = i + 1, on = !!done[id];
+      t.classList.toggle("done", on);
+      t.querySelector("input[data-done]").checked = on;
+      if (on) n++;
+    });
+    document.getElementById("pg").textContent = n;
+  }
+  document.addEventListener("change", function (e) {
+    var c = e.target.closest && e.target.closest("input[data-done]");
+    if (!c) return;
+    done[c.dataset.done] = c.checked;
+    save(); render();
+  });
+  var chips = document.querySelectorAll(".chip");
+  Array.prototype.forEach.call(chips, function (ch) {
+    ch.addEventListener("click", function () {
+      var f = ch.dataset.f;
+      Array.prototype.forEach.call(chips, function (x) { x.setAttribute("aria-pressed", String(x === ch)); });
+      tasks.forEach(function (t) { t.hidden = !(f === "all" || t.dataset.cat === f); });
+    });
+  });
+  document.getElementById("open-all").addEventListener("click", function () { tasks.forEach(function (t) { if (!t.hidden) t.open = true; }); });
+  document.getElementById("close-all").addEventListener("click", function () { tasks.forEach(function (t) { t.open = false; }); });
+  if (location.hash && /^#t\d+$/.test(location.hash)) { var el = document.querySelector(location.hash); if (el) el.open = true; }
+  render();
+})();
+</script>
+</body>
+</html>
