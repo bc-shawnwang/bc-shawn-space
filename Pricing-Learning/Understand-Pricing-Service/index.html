@@ -262,6 +262,7 @@ footer a:hover{color:var(--amber);}
     <div class="seg" id="bu-seg">
       <button data-s="disc" aria-pressed="true">Group discount</button>
       <button data-s="pl" aria-pressed="false">Price list</button>
+      <button data-s="none" aria-pressed="false">None (catalog only)</button>
     </div>
     <button class="play" id="bu-play">&#9654; Play</button>
     <button class="play" id="bu-step">Step</button>
@@ -279,7 +280,7 @@ footer a:hover{color:var(--amber);}
     </div>
   </div>
   <div id="bu-note" aria-live="polite">Press Play, or Step to go one input at a time.</div>
-  <p class="small muted">Example: the variant's catalog price is $50.00 in USD. The shopper pays in EUR at an exchange rate of 0.8. The option adds a relative rule of $5.00. The group has either a 10% discount or a price list record of &euro;34.00. Tax is 10% and prices are entered exclusive of tax.</p>
+  <p class="small muted">Example: the variant's catalog price is $50.00 in USD. The shopper pays in EUR at an exchange rate of 0.8. The option adds a relative rule of $5.00. The group has a 10% discount, a price list record of &euro;34.00, or neither (mode None, plain catalog prices). Tax is 10% and prices are entered exclusive of tax.</p>
 
   <h3>Direct inputs (what the caller sends)</h3>
   <p class="small muted">From <code>ListEstimatedTaxPricesReqProto</code>, plus the cart request items.</p>
@@ -382,7 +383,7 @@ footer a:hover{color:var(--amber);}
     settings:{label:"Store settings and flags",detail:function(){return "price lists and discounts on";}},
     catalog:{label:"Catalog price",detail:function(){return "$50.00 in USD";}},
     rate:{label:"Exchange rate",detail:function(){return "&times; 0.8, so &euro;40.00";}},
-    mode:{label:"Pricing mode",detail:function(s){return s==="disc"?"Discounts: 10% off":"Price list: record &euro;34.00";}},
+    mode:{label:"Pricing mode",detail:function(s){return s==="disc"?"Discounts: 10% off":s==="pl"?"Price list: record &euro;34.00":"None: catalog prices only";}},
     rules:{label:"Option rule and picklists",detail:function(){return "+&euro;4.00 ($5.00 &times; 0.8)";}},
     tax:{label:"Tax",detail:function(){return "10% for this tax zone";}}
   };
@@ -392,8 +393,8 @@ footer a:hover{color:var(--amber);}
     product:function(){return "<b>Product + variant</b> arrives. Catalog gives the starting price: $50.00.";},
     currency:function(){return "<b>Currency</b> arrives. Catalog values are multiplied by the exchange rate: $50.00 &times; 0.8 = &euro;40.00.";},
     channel:function(){return "<b>Channel</b> arrives. It scopes the catalog read and the price list assignment. No price change on its own.";},
-    group:function(s){return s==="disc"?"<b>Customer group</b> arrives. It has discounts and no price list, so the mode is Discounts. A 10% discount lowers the calculated price: &euro;40.00 to &euro;36.00.":"<b>Customer group</b> arrives. It has a price list assigned, so the mode is Price list. The record for this variant and currency replaces the catalog price: &euro;40.00 to &euro;34.00. Discounts are skipped.";},
-    options:function(s){return s==="disc"?"<b>Options</b> arrive. The option rule adds &euro;4.00 to the price, and rules apply before the discount, so the discount now applies to &euro;44.00: &euro;39.60.":"<b>Options</b> arrive. The option rule applies to the price list price: &euro;34.00 + &euro;4.00 = &euro;38.00.";},
+    group:function(s){if(s==="none")return "<b>Customer group</b> arrives. It has no price list and no discounts, so the mode is None. Nothing replaces or lowers the price: it stays the catalog price, &euro;40.00.";return s==="disc"?"<b>Customer group</b> arrives. It has discounts and no price list, so the mode is Discounts. A 10% discount lowers the calculated price: &euro;40.00 to &euro;36.00.":"<b>Customer group</b> arrives. It has a price list assigned, so the mode is Price list. The record for this variant and currency replaces the catalog price: &euro;40.00 to &euro;34.00. Discounts are skipped.";},
+    options:function(s){if(s==="none")return "<b>Options</b> arrive. The option rule adds &euro;4.00 to the catalog price: &euro;40.00 + &euro;4.00 = &euro;44.00. No discount follows.";return s==="disc"?"<b>Options</b> arrive. The option rule adds &euro;4.00 to the price, and rules apply before the discount, so the discount now applies to &euro;44.00: &euro;39.60.":"<b>Options</b> arrive. The option rule applies to the price list price: &euro;34.00 + &euro;4.00 = &euro;38.00.";},
     country:function(){return "<b>Country</b> arrives. It picks the tax zone. The entered price does not change. Tax adds an inclusive amount next to it.";}
   };
   var $=function(i){return document.getElementById(i);};
