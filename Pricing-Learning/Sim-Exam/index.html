@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sim Exam</title>
+<style>
+:root{
+  --bg:#10141b;
+  --surface:#171c25;
+  --surface-2:#1c2230;
+  --border:#2a3140;
+  --border-soft:#232a38;
+  --text:#e9e7e0;
+  --muted:#8b93a3;
+  --amber:#e8a33d;
+  --amber-dim:#4a3c22;
+  --amber-bg:rgba(232,163,61,0.13);
+  --violet:#8b7cf0;
+  --blue-bg:rgba(55,138,221,0.14);
+  --blue-text:#7fb4e8;
+  --teal-bg:rgba(29,158,117,0.16);
+  --teal-text:#63d6ab;
+  --red-bg:rgba(226,92,92,0.14);
+  --red-text:#f09a9a;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+body{-webkit-font-smoothing:antialiased;line-height:1.6;}
+main{max-width:920px;margin:0 auto;padding:56px 24px 96px;}
+a{color:var(--amber);}
+a:hover{text-decoration:underline;}
+
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+.eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--violet);display:inline-block;}
+.eyebrow a{color:var(--muted);text-decoration:none;}
+.eyebrow a:hover{color:var(--amber);}
+.eyebrow .sep{opacity:.5;}
+
+h1{font-size:clamp(26px,3.8vw,36px);line-height:1.18;letter-spacing:-0.01em;margin:0 0 12px;}
+h2{font-size:20px;font-weight:650;margin:56px 0 6px;scroll-margin-top:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+h3{font-size:15.5px;font-weight:650;margin:30px 0 8px;}
+h4{font-size:13px;font-weight:650;margin:22px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+p{margin:0 0 14px;}
+p.lede{color:var(--muted);margin:0 0 28px;max-width:680px;font-size:15px;}
+.muted{color:var(--muted);}
+.small{font-size:12.5px;}
+hr.sep{border:none;border-top:1px solid var(--border);margin:44px 0 0;}
+
+code{background:var(--surface-2);padding:1px 6px;border-radius:4px;font-size:12.5px;font-family:var(--mono);border:1px solid var(--border);word-break:break-word;}
+pre.code{background:#0a0d12;color:#c9d1d9;border-radius:8px;padding:14px 16px;font-size:12px;line-height:1.55;font-family:var(--mono);overflow-x:auto;margin:10px 0 18px;border:1px solid var(--border);white-space:pre;}
+pre.code .k{color:#79c0ff;}      /* keys / types */
+pre.code .s{color:#a5d6a7;}      /* strings */
+pre.code .n{color:#ffa657;}      /* numbers */
+pre.code .c{color:#6e7681;}      /* comments */
+pre.code .f{color:#d2a8ff;}      /* fields / fragments */
+.file{display:block;font-family:var(--mono);font-size:11.5px;color:var(--muted);margin:14px 0 -4px;}
+ul,ol{padding-left:20px;margin:0 0 14px;}
+li{margin-bottom:8px;}
+
+/* badges */
+.badge{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:2px 9px;border-radius:999px;border:1px solid var(--border);color:var(--muted);vertical-align:middle;white-space:nowrap;}
+.badge.wip{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-dim);}
+.badge.live{background:var(--teal-bg);color:var(--teal-text);border-color:rgba(29,158,117,.35);}
+.badge.unverified{background:var(--red-bg);color:var(--red-text);border-color:rgba(226,92,92,.3);}
+
+/* callouts */
+.callout{border-radius:8px;padding:12px 16px;font-size:13.5px;margin:0 0 14px;border:1px solid transparent;}
+.callout.blue{background:var(--blue-bg);color:var(--blue-text);}
+.callout.teal{background:var(--teal-bg);color:var(--teal-text);}
+.callout.amber{background:var(--amber-bg);color:var(--amber);}
+.callout.red{background:var(--red-bg);color:var(--red-text);}
+.callout code{background:rgba(0,0,0,.25);border-color:rgba(255,255,255,.1);color:inherit;}
+.callout strong{color:inherit;}
+
+/* tables */
+.card-table{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow-x:auto;margin:10px 0 20px;}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px;}
+th,td{padding:10px 12px;text-align:left;border-top:1px solid var(--border);vertical-align:top;}
+thead th{border-top:none;font-weight:600;background:var(--surface-2);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+td.t{white-space:nowrap;}
+tr.hl td{background:rgba(232,163,61,.07);}
+
+/* definition grid */
+dl.terms{display:grid;grid-template-columns:minmax(150px,230px) 1fr;gap:0;margin:10px 0 20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+dl.terms dt,dl.terms dd{padding:11px 14px;border-top:1px solid var(--border);margin:0;font-size:13.5px;}
+dl.terms dt:first-of-type,dl.terms dd:first-of-type{border-top:none;}
+dl.terms dt{font-weight:600;color:var(--text);background:var(--surface-2);}
+dl.terms dd{color:var(--text);}
+dl.terms dd .muted{font-size:12.5px;}
+@media(max-width:640px){dl.terms{grid-template-columns:1fr;}dl.terms dt{border-top:1px solid var(--border);}dl.terms dd{border-top:none;}}
+
+/* group headings inside terms */
+.termgroup{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);margin:28px 0 -4px;}
+
+/* page cards (sub page links) */
+ul.pages{list-style:none;margin:0;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
+li.page{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:0;transition:border-color .15s ease, background .15s ease;}
+li.page:hover{border-color:var(--amber-dim);background:var(--surface-2);}
+li.page a{display:block;color:var(--text);font-weight:600;font-size:16px;text-decoration:none;}
+li.page a:hover{color:var(--amber);}
+li.page .desc{color:var(--muted);font-size:13.5px;margin-top:4px;}
+
+/* table of contents */
+nav.toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin:0 0 8px;}
+nav.toc .title{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:28px;}
+nav.toc li{margin-bottom:5px;font-size:13.5px;break-inside:avoid;}
+nav.toc a{text-decoration:none;}
+@media(max-width:640px){nav.toc ol{columns:1;}}
+
+/* animated request chain */
+.flow-caption{color:var(--muted);font-size:12.5px;margin:0 0 10px;}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:6px 0 20px;}
+.flow .node{flex:1 1 150px;min-width:140px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;background:var(--surface);animation:nodePulse 8s infinite ease;}
+.flow .node small{display:block;color:var(--muted);font-size:11px;margin-top:3px;}
+.flow .node b{font-weight:600;}
+.flow .node .tag{font-family:var(--mono);font-size:10.5px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.08em;}
+.flow .node:nth-child(1){animation-delay:0s;}
+.flow .node:nth-child(2){animation-delay:.9s;}
+.flow .node:nth-child(3){animation-delay:1.8s;}
+.flow .node:nth-child(4){animation-delay:2.7s;}
+.flow .node:nth-child(5){animation-delay:3.6s;}
+.flow .node:nth-child(6){animation-delay:4.5s;}
+.flow .node:nth-child(7){animation-delay:5.4s;}
+.flow .node.grpc{--c:29,158,117;}
+.flow .node.http{--c:55,138,221;}
+.flow .node.gql{--c:139,124,240;}
+.flow .node{--c:232,163,61;}
+@keyframes nodePulse{
+  0%,2%{box-shadow:none;border-color:var(--border);}
+  6%{box-shadow:0 0 0 2px rgba(var(--c),.5);border-color:rgb(var(--c));}
+  16%,100%{box-shadow:none;border-color:var(--border);}
+}
+@media(prefers-reduced-motion:reduce){.flow .node{animation:none;}html{scroll-behavior:auto;}}
+
+/* interactive switcher */
+.switcher{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:10px 0 20px;}
+.switcher .label{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.seg{display:inline-flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.seg button{font:inherit;font-size:12.5px;font-family:var(--mono);background:var(--surface-2);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;}
+.seg button:hover{color:var(--text);}
+.seg button[aria-pressed="true"]{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-dim);}
+.out{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;}
+.out .cell{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:10px 12px;font-size:13px;}
+.out .cell .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:3px;}
+.out .cell.yes{border-color:rgba(29,158,117,.45);}
+.out .cell.no{opacity:.6;}
+.out .note{grid-column:1/-1;font-size:13px;color:var(--muted);}
+.items{margin-top:12px;}
+.items .row{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:12.5px;}
+.items .row .alias{font-family:var(--mono);color:var(--violet);min-width:190px;}
+.items .row .item{font-family:var(--mono);color:#c9d1d9;}
+.items .row.dedup{opacity:.55;}
+
+footer{margin-top:64px;color:var(--muted);font-family:var(--mono);font-size:12px;display:flex;gap:18px;flex-wrap:wrap;}
+footer a{color:var(--muted);}
+footer a:hover{color:var(--amber);}
+
+.bar-sticky{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border);margin:0 -24px 22px;padding:10px 24px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;font-size:13px;}
+.bar-sticky .stat{font-family:var(--mono);color:var(--muted);}
+.bar-sticky .stat b{color:var(--amber);}
+.bar-sticky .sp{flex:1;}
+.btn{font:inherit;font-size:12.5px;font-family:var(--mono);background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;}
+.btn:hover{border-color:var(--amber-dim);color:var(--amber);}
+.btn.primary{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-dim);}
+.tog{display:inline-flex;gap:6px;align-items:center;color:var(--muted);cursor:pointer;}
+.part{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);margin:34px 0 12px;}
+.q{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin:0 0 14px;scroll-margin-top:70px;}
+.q.ok{border-color:rgba(29,158,117,.55);}
+.q.bad{border-color:rgba(226,92,92,.5);}
+.q .head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;font-family:var(--mono);font-size:11.5px;color:var(--muted);}
+.q .head .n{color:var(--amber);font-weight:600;}
+.q .tag{padding:1px 9px;border-radius:999px;border:1px solid var(--border);}
+.q .tag.th{background:var(--blue-bg);color:var(--blue-text);border-color:transparent;}
+.q .tag.pr{background:var(--teal-bg);color:var(--teal-text);border-color:transparent;}
+.q p.text{margin:0 0 12px;font-size:15px;}
+.q fieldset{border:none;margin:0 0 12px;padding:0;}
+.q legend{font-size:12px;color:var(--muted);margin-bottom:6px;padding:0;}
+.opt{display:flex;gap:10px;align-items:flex-start;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:9px 12px;margin:0 0 7px;cursor:pointer;font-size:13.5px;}
+.opt:hover{border-color:var(--amber-dim);}
+.opt input{margin-top:3px;accent-color:#e8a33d;}
+.opt.sel{border-color:var(--amber-dim);background:var(--amber-bg);}
+.opt.right{border-color:rgba(29,158,117,.6);background:var(--teal-bg);}
+.opt.wrong{border-color:rgba(226,92,92,.55);background:var(--red-bg);}
+.q.done .opt{cursor:default;}
+.numrow{display:flex;gap:10px;align-items:center;margin:0 0 12px;font-size:13px;color:var(--muted);}
+.numrow input{font:inherit;font-family:var(--mono);font-size:14px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:7px 10px;width:150px;}
+.q .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.q .err{color:var(--red-text);font-size:12.5px;}
+.fb{margin-top:12px;border-top:1px solid var(--border);padding-top:12px;font-size:13.5px;}
+.fb .verdict{font-weight:700;margin-bottom:6px;}
+.q.ok .verdict{color:var(--teal-text);}
+.q.bad .verdict{color:var(--red-text);}
+.fb .ans{margin:0 0 8px;}
+.fb .refs{margin:8px 0 0;font-size:12.5px;color:var(--muted);}
+.fb .refs a{margin-right:4px;}
+.result{background:var(--surface);border:1px solid var(--amber-dim);border-radius:10px;padding:18px 20px;margin:26px 0 0;}
+.result h2{margin:0 0 8px;}
+.result .score{font-family:var(--mono);font-size:28px;color:var(--amber);}
+.result ul{margin:10px 0 0;}
+@media(max-width:640px){.bar-sticky{margin:0 -16px 18px;padding:10px 16px;}}
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow"><span class="dot"></span><a href="../../index.html">bc-shawn-space</a><span class="sep">/</span><a href="../index.html">Pricing Learning</a><span class="sep">/</span>Sim Exam</div>
+  <h1>Sim Exam</h1>
+  <p class="lede">Twenty questions on the Pricing Learning docs: ten theory and ten practical. Pick or type an answer, then check it. Each answer comes with a short explanation and a link to the part of the docs it comes from.</p>
+  <div class="callout blue"><strong>How it works:</strong> answers are checked in your browser and nothing is saved. Number questions accept a small rounding difference. The practical questions use the same example numbers as the docs. The tax, price list and code questions are based on what the docs say was read from source, not run against a store.</div>
+
+  <div class="bar-sticky" id="bar">
+    <span class="stat">Answered <b id="st-ans">0</b>/20</span>
+    <span class="stat">Checked <b id="st-chk">0</b>/20</span>
+    <span class="stat">Correct <b id="st-ok">0</b></span>
+    <span class="sp"></span>
+    <label class="tog"><input type="checkbox" id="study"> Study mode (check as you answer)</label>
+    <button class="btn" id="check-all" type="button">Check all</button>
+    <button class="btn" id="reset" type="button">Reset</button>
+  </div>
+
+  <div id="qs"></div>
+  <div id="result"></div>
+
+  <footer><a href="../index.html">&larr; back to Pricing Learning</a><a href="../../index.html">back to index</a></footer>
+</main>
+<script>
+(function () {
+  var Q = [{"cat": "Theory", "topic": "Factors", "type": "single", "q": "In the estimate request, which of these is not sent by the caller but derived by the service from other inputs?", "options": ["<code>customer_group_id</code>", "<code>channel_id</code>", "The price list that applies", "<code>currency_code</code>"], "answer": 2, "exp": "The caller sends the customer group and the channel. The service uses them to find the price list assignment, so the price list is derived. The tax rate is derived too, and so is the exchange rate when none is sent.", "refs": [{"t": "Understand Pricing Service, B. What decides a product's price", "h": "../Understand-Pricing-Service/index.html#factors"}]}, {"cat": "Theory", "topic": "Pricing mode", "type": "single", "q": "Customer group 6 has customer group discounts. A channel-wide price list (assigned to group 0) also exists for the channel. Which pricing mode applies to group 6?", "options": ["PriceList", "Discounts", "None", "PriceList and Discounts together"], "answer": 1, "exp": "A group's own price list wins first. A channel-wide list applies only when the group has no discounts, so here the group's discounts win. A price list and customer group discounts never apply together.", "refs": [{"t": "Estimate RPC, 4. Which pricing mode applies", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#mode"}]}, {"cat": "Theory", "topic": "Price fields", "type": "single", "q": "Which price fields do option set rules and customer group discounts change?", "options": ["Only <code>calculated_price</code>. The price range ends also get discounts, but not rules.", "<code>price</code>, <code>sale_price</code> and <code>calculated_price</code>", "Every price field, <code>retail_price</code> included", "Only <code>price</code>"], "answer": 0, "exp": "Rules, discounts and picklists change only <code>calculated_price</code>. <code>price</code>, <code>sale_price</code>, <code>retail_price</code> and MAP stay as fetched, or as replaced by a price list record. The range min and max get discounts but not rules or picklists.", "refs": [{"t": "Estimate RPC, 5. What overrides what", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#override"}, {"t": "Estimate RPC, 7. What changes calculated_price", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#adjust"}]}, {"cat": "Theory", "topic": "Tax", "type": "single", "q": "What does tax do to a price in the estimate RPC?", "options": ["Replaces the price with the tax-inclusive amount", "Leaves <code>as_entered</code> unchanged and adds <code>tax_inclusive</code> and <code>tax_exclusive</code> next to it", "Is applied before rules and discounts", "Is applied only to <code>calculated_price</code>"], "answer": 1, "exp": "Tax works on the entered amount after all adjustments and rounding. One of the two returned amounts equals <code>as_entered</code>; the other is calculated. Every price line is taxed, not only <code>calculated_price</code>.", "refs": [{"t": "Estimate RPC, 8. To the final response", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#final"}, {"t": "Estimate RPC, 1. Request and response", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#io"}]}, {"cat": "Theory", "topic": "Price lists", "type": "single", "q": "A variant has no record on an exclusive price list, and the request has <code>enable_null_prices_in_response = false</code>. What does the estimate RPC return for it?", "options": ["Its catalog price", "Zero prices", "Null prices", "An error"], "answer": 1, "exp": "Inclusive and exclusive price lists never fall back to catalog prices. A missing record gives null prices when <code>enable_null_prices_in_response</code> is true, and zero prices when it is false.", "refs": [{"t": "Estimate RPC, 1. Request and response", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#io"}, {"t": "Estimate RPC, 5. What overrides what", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#override"}]}, {"cat": "Theory", "topic": "Bulk tiers", "type": "single", "q": "How do bulk tiers differ between <code>ListEstimatedTaxProductPrices</code> and <code>GetCartPricing</code>?", "options": ["Both apply the tier to the price", "The estimate returns tiers as data and never changes <code>calculated_price</code>. The cart RPC picks one tier using quantities summed over the cart and applies it.", "The estimate applies the tier and the cart RPC returns tiers as data", "Neither uses bulk tiers"], "answer": 1, "exp": "The estimate has no quantity, so tiers are data for the client. The cart RPC sums quantities per variant or product across the cart, chooses one tier, applies it, and returns it as <code>applied_bulk_tier_pricing</code>.", "refs": [{"t": "GetCartPricing, 9. Compared with the estimate RPC", "h": "../Understand-Pricing-Service/GetCartPricing/index.html#diff"}, {"t": "GetCartPricing, 5. The bulk tier", "h": "../Understand-Pricing-Service/GetCartPricing/index.html#bulk"}]}, {"cat": "Theory", "topic": "Client side", "type": "single", "q": "Which two experiments must be on for bcapp to price cart lines through <code>GetCartPricing</code>?", "options": ["<code>PAS-1243</code> and <code>STRF-14355</code>", "<code>PROJECT-5992</code> (tax inclusive and exclusive price lists) and <code>PROJECT-8948</code> (hydrate cart prices from the pricing service)", "<code>PROJECT-7275</code> (cascading price lists) and <code>PROJECT-8948</code>", "<code>PROJECT-8948</code> only"], "answer": 1, "exp": "The second flag is only read when the first is on. With the first off, bcapp uses its legacy path. With the first on and the second off, bcapp prices the cart itself in PHP.", "refs": [{"t": "Understand Client Side, 5. Cart / Checkout", "h": "../Understand-Client-Side/index.html#cart"}, {"t": "GetCartPricing, 1. Purpose", "h": "../Understand-Pricing-Service/GetCartPricing/index.html#purpose"}]}, {"cat": "Theory", "topic": "Client side", "type": "single", "q": "StorefrontGraphQL can call bcapp and the Pricing service. In the traffic mode <code>compare</code>, which result does the shopper get?", "options": ["The gRPC result", "The bcapp result. The gRPC result is only compared.", "Whichever answers first", "The lower price"], "answer": 1, "exp": "In <code>compare</code> the gRPC call runs in parallel and is only compared: its result is dropped if it has not finished, and its errors are swallowed. <code>compare_serve_pricing</code> races the two and prefers gRPC. <code>enable</code> serves gRPC only. <code>disable</code> never calls gRPC.", "refs": [{"t": "Understand Client Side, 1. StorefrontGraphQL", "h": "../Understand-Client-Side/index.html#graphql"}]}, {"cat": "Theory", "topic": "Client side", "type": "single", "q": "A shopper changes an option on a product page. Which path prices the new selection?", "options": ["<code>ListEstimatedTaxProductPrices</code> through StorefrontGraphQL", "<code>POST /remote/v1/product-attributes/{productId}</code>, handled by bcapp: it asks the Pricing service only for the price list and its records, and does the maths in PHP", "<code>GetCartPricing</code>", "The theme calculates it in the browser"], "answer": 1, "exp": "The first paint can be priced by the Pricing service through StorefrontGraphQL. After an option change the price comes from bcapp's own implementation of the same rules, so the two can disagree.", "refs": [{"t": "Understand Client Side, 2. product-attributes", "h": "../Understand-Client-Side/index.html#product-attributes"}, {"t": "Understand Client Side, 4. PDP", "h": "../Understand-Client-Side/index.html#pdp"}]}, {"cat": "Theory", "topic": "GetCartPricing", "type": "multi", "q": "Select all statements about <code>GetCartPricing</code> that are true, as read from the code.", "options": ["It always applies tax to the unit prices.", "The service never sets <code>prices_entered_tax_inclusive</code>, so bcapp always receives false.", "If the Catalog call fails, every line comes back with no price.", "The service does no rounding. bcapp rounds when it writes the Checkout API response.", "<code>product_attribute_combination_id</code> decides which variant is priced."], "answer": [1, 2, 3], "exp": "There is no tax step in this RPC. The field <code>prices_entered_tax_inclusive</code> is in the proto but <code>CartPricingImpl</code> returns only <code>selection_prices</code>. A failed Catalog call gives every item empty data, and an empty item has no price. The combination ID is read but unused. These are read from source, not tested.", "refs": [{"t": "GetCartPricing, 7. Response fields", "h": "../Understand-Pricing-Service/GetCartPricing/index.html#response"}, {"t": "GetCartPricing, 8. When a price is null", "h": "../Understand-Pricing-Service/GetCartPricing/index.html#null"}, {"t": "GetCartPricing, 10. Open questions", "h": "../Understand-Pricing-Service/GetCartPricing/index.html#open"}]}, {"cat": "Practical", "topic": "Calculation", "type": "num", "unit": "EUR", "q": "A variant's catalog price is $50.00. The exchange rate to EUR is 0.8. The chosen option has a relative rule of +$5.00. The shopper's group has a 10% customer group discount and no price list (Discounts mode). There are no picklists. What is <code>calculated_price</code> in EUR?", "answer": 39.6, "exp": "$50.00 &times; 0.8 = 40.00. The rule adds $5.00 &times; 0.8 = 4.00, giving 44.00. Rules come before discounts: 44.00 &times; 0.9 = 39.60.", "refs": [{"t": "Estimate RPC, 7. What changes calculated_price", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#adjust"}]}, {"cat": "Practical", "topic": "Calculation", "type": "num", "unit": "EUR", "q": "The same variant, but the shopper's group is now assigned price list #7, whose record for the variant has a calculated price of 34.00 EUR. The same +$5.00 rule applies, and the group also has a 10% discount. What is <code>calculated_price</code> in EUR?", "answer": 38.0, "exp": "The price list record replaces the catalog value: 34.00. The rule adds 4.00, giving 38.00. The discount is ignored, because a price list and customer group discounts never apply together.", "refs": [{"t": "Estimate RPC, 5. What overrides what", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#override"}, {"t": "Estimate RPC, 4. Which pricing mode applies", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#mode"}]}, {"cat": "Practical", "topic": "Ranges", "type": "single", "q": "Product 112 has two variants priced at 40.00 and 45.00 EUR. A 10% discount applies. The request's options resolve to the first variant, which has a +4.00 option rule. What is <code>price_range</code>?", "options": ["36.00 to 40.50", "39.60 to 44.10", "40.00 to 45.00", "39.60 to 39.60"], "answer": 0, "exp": "The range ends get the customer group discount but not option rules or picklists: 40.00 &times; 0.9 = 36.00 and 45.00 &times; 0.9 = 40.50. The <code>calculated_price</code> is 39.60 (rule, then discount), so the range can disagree with it.", "refs": [{"t": "Estimate RPC, 6. The five calculation branches", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#branches"}, {"t": "Estimate RPC, 7. What changes calculated_price", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#adjust"}]}, {"cat": "Practical", "topic": "Tax", "type": "num", "unit": "EUR", "q": "<code>calculated_price</code> is 39.60 and <code>retail_price</code> is 60.00, both entered exclusive of tax. Tax is 10%. What is <code>saved.tax_inclusive</code>?", "answer": 22.44, "exp": "Calculated inclusive: 39.60 &times; 1.10 = 43.56. Retail inclusive: 66.00. <code>saved</code> is retail minus calculated, taken separately for each of the three amounts: 66.00 &minus; 43.56 = 22.44. It is computed after tax, and only when retail is greater than calculated.", "refs": [{"t": "Estimate RPC, 8. To the final response", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#final"}]}, {"cat": "Practical", "topic": "Request fields", "type": "single", "q": "A client sends <code>exchange_rate = 0.8</code> and <code>currency_decimal_precision = 0</code> for a EUR request. What happens to the decimals?", "options": ["The service looks the precision up in the currency projection", "The precision of 0 is used as it is, so prices are rounded to whole units", "The request fails", "The default of 2 is used"], "answer": 1, "exp": "The currency projection is only consulted when <code>exchange_rate</code> is missing. If a rate is sent, the request's precision is used, even when it is 0. When sending a rate, send the precision too.", "refs": [{"t": "Estimate RPC, 1. Request and response", "h": "../Understand-Pricing-Service/ListEstimatedTaxProductPrices/index.html#io"}]}, {"cat": "Practical", "topic": "Cart bulk tier", "type": "num", "unit": "units", "q": "A cart has one T-shirt product. Item A (variant 321, quantity 2) has a price record. Item B (variant 322, quantity 3) has none and uses the product's catalog tiers. Which quantity picks Item B's catalog bulk tier?", "answer": 3, "exp": "Catalog tiers match on the product's total over the whole cart, minus the units priced from price records: (2 + 3) &minus; 2 = 3. Item A uses its record's tiers with its own variant total of 2.", "refs": [{"t": "GetCartPricing, 5. The bulk tier", "h": "../Understand-Pricing-Service/GetCartPricing/index.html#bulk"}]}, {"cat": "Practical", "topic": "Cart adjustments", "type": "num", "unit": "EUR", "q": "In <code>GetCartPricing</code> a catalog variant's calculated price is 50.00. A rule adds 4.00, the group has a 10% discount (Discounts mode), and a catalog bulk tier takes 5.00 off. The store setting <code>applyBulkTiersAfterDiscounts</code> is on. What is the unit <code>calculated_price</code>?", "answer": 43.6, "exp": "Rules first: 54.00. With the setting on, the discount comes before the tier: 54.00 &times; 0.9 = 48.60, then &minus; 5.00 = 43.60. With it off, the tier comes first: (54.00 &minus; 5.00) &times; 0.9 = 44.10.", "refs": [{"t": "GetCartPricing, 6. Adjusting the price", "h": "../Understand-Pricing-Service/GetCartPricing/index.html#adjust"}]}, {"cat": "Practical", "topic": "Price lists", "type": "single", "q": "A cart line's variant has no record on an exclusive price list. What happens in the cart?", "options": ["It is priced from the catalog", "It gets a zero price", "It comes back with no price, so bcapp removes the line from the cart", "The cart request fails"], "answer": 2, "exp": "Inclusive and exclusive price lists have no catalog fallback. <code>GetCartPricing</code> returns an empty price, and bcapp silently removes lines that have no price (or a negative one) when the tax inc/ex experiment is on.", "refs": [{"t": "GetCartPricing, 4. Mode, price lists and base prices", "h": "../Understand-Pricing-Service/GetCartPricing/index.html#base"}, {"t": "GetCartPricing, 8. When a price is null", "h": "../Understand-Pricing-Service/GetCartPricing/index.html#null"}, {"t": "Understand Client Side, 5. Cart / Checkout", "h": "../Understand-Client-Side/index.html#cart"}]}, {"cat": "Practical", "topic": "Checkout API", "type": "num", "unit": "EUR", "q": "A checkout line item has <code>basePrice</code> 50.00, quantity 2, and a product-based discount of 10.00 on the line (no coupon). Prices are entered and displayed exclusive of tax. What is the response field <code>salePrice</code> (per unit)?", "answer": 45.0, "exp": "<code>salePrice</code> is the unit price in the display tax treatment minus <code>discountAmount &divide; quantity</code>: 50.00 &minus; 10.00 &divide; 2 = 45.00. <code>extendedSalePrice</code> is 90.00. <code>comparisonPrice</code> is <code>listPrice</code> (50.00), because there is a discount and prices are entered the way they are displayed. This is not the catalog <code>sale_price</code>.", "refs": [{"t": "Understand Client Side, Prices in the Storefront Checkout API response", "h": "../Understand-Client-Side/index.html#cart-api"}]}, {"cat": "Practical", "topic": "Code structure", "type": "single", "q": "You add a handler for a new RabbitMQ event queue in the <code>pricing</code> repository. Where do you start consuming it?", "options": ["In <code>Boot.scala</code>, next to the gRPC registrations", "In <code>EventListenerBoot.scala</code> with a <code>Consumer(queue)</code>, and wire the services the handler needs there too", "In the <code>*Impl</code> class of the matching RPC", "In the <code>common</code> module"], "answer": 1, "exp": "One jar builds two processes. <code>Boot</code> serves the gRPC services. <code>EventListenerBoot</code> is the listener's main class and builds its own copies of the services, so anything a handler needs must be wired there as well.", "refs": [{"t": "Code Structure, 2. One jar, two processes", "h": "../Understand-Pricing-Service/CodeStructure/index.html#processes"}, {"t": "Code Structure, 9. Where new code goes", "h": "../Understand-Pricing-Service/CodeStructure/index.html#where"}]}];
+  var A = [], done = [], ok = [];
+  var qs = document.getElementById("qs");
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+  function build() {
+    var h = "", lastCat = "";
+    Q.forEach(function (q, i) {
+      if (q.cat !== lastCat) { lastCat = q.cat; h += '<div class="part">' + q.cat + " questions</div>"; }
+      h += '<section class="q" id="q' + i + '" aria-labelledby="qt' + i + '"><div class="head"><span class="n">Q' + (i + 1) + '</span><span class="tag ' + (q.cat === "Theory" ? "th" : "pr") + '">' + q.cat + '</span><span class="tag">' + q.topic + '</span></div>';
+      h += '<p class="text" id="qt' + i + '">' + q.q + "</p>";
+      if (q.type === "num") {
+        h += '<div class="numrow"><input type="number" step="any" inputmode="decimal" id="n' + i + '" aria-label="Your answer for question ' + (i + 1) + '"> <span>' + q.unit + "</span></div>";
+      } else {
+        h += '<fieldset><legend>' + (q.type === "multi" ? "Select all that apply" : "Choose one") + "</legend>";
+        q.options.forEach(function (o, k) {
+          h += '<label class="opt" data-q="' + i + '" data-k="' + k + '"><input type="' + (q.type === "multi" ? "checkbox" : "radio") + '" name="q' + i + '" value="' + k + '"><span>' + o + "</span></label>";
+        });
+        h += "</fieldset>";
+      }
+      h += '<div class="actions"><button class="btn" type="button" data-check="' + i + '">Check answer</button><span class="err" id="e' + i + '" role="alert"></span></div>';
+      h += '<div class="fb" id="f' + i + '" hidden aria-live="polite"></div></section>';
+    });
+    qs.innerHTML = h;
+  }
+
+  function getAnswer(i) {
+    var q = Q[i];
+    if (q.type === "num") { var v = document.getElementById("n" + i).value; return v === "" ? null : parseFloat(v); }
+    var picked = [];
+    Array.prototype.forEach.call(document.querySelectorAll('#q' + i + ' input'), function (inp) { if (inp.checked) picked.push(parseInt(inp.value, 10)); });
+    if (!picked.length) return null;
+    return q.type === "multi" ? picked : picked[0];
+  }
+  function isRight(i, a) {
+    var q = Q[i];
+    if (q.type === "num") return Math.abs(a - q.answer) < 0.005 + 1e-9;
+    if (q.type === "multi") { var s = a.slice().sort().join(","), t = q.answer.slice().sort().join(","); return s === t; }
+    return a === q.answer;
+  }
+  function answerText(i) {
+    var q = Q[i];
+    if (q.type === "num") return q.answer.toFixed(2).replace(/\.00$/, q.unit === "units" ? "" : ".00") + " " + q.unit;
+    var idx = q.type === "multi" ? q.answer : [q.answer];
+    return idx.map(function (k) { return q.options[k]; }).join("; ");
+  }
+  function update() {
+    var an = 0, ch = 0, c = 0;
+    Q.forEach(function (q, i) { if (A[i] !== null && A[i] !== undefined) an++; if (done[i]) ch++; if (ok[i]) c++; });
+    document.getElementById("st-ans").textContent = an;
+    document.getElementById("st-chk").textContent = ch;
+    document.getElementById("st-ok").textContent = c;
+    var res = document.getElementById("result");
+    if (ch === Q.length) {
+      var missed = [];
+      Q.forEach(function (q, i) { if (!ok[i]) missed.push(i); });
+      var pct = Math.round(c / Q.length * 100);
+      var msg = pct >= 90 ? "Excellent. You know the Pricing service well." : pct >= 70 ? "Good. Review the questions you missed." : "Keep going. Read the linked sections and try again.";
+      var h = '<div class="result"><h2>Result</h2><div class="score">' + c + " / " + Q.length + " (" + pct + "%)</div><p>" + msg + "</p>";
+      if (missed.length) {
+        h += "<p>Review these:</p><ul>";
+        missed.forEach(function (i) { h += '<li><a href="#q' + i + '">Q' + (i + 1) + "</a> " + Q[i].topic + " &mdash; " + Q[i].refs.map(function (r) { return '<a href="' + r.h + '">' + r.t + "</a>"; }).join(", ") + "</li>"; });
+        h += "</ul>";
+      }
+      res.innerHTML = h + "</div>";
+    } else res.innerHTML = "";
+  }
+  function check(i, quiet) {
+    if (done[i]) return true;
+    var a = getAnswer(i), err = document.getElementById("e" + i);
+    if (a === null || (typeof a === "number" && isNaN(a))) { if (!quiet) err.textContent = Q[i].type === "num" ? "Enter a number first." : "Choose an answer first."; return false; }
+    err.textContent = "";
+    var q = Q[i], right = isRight(i, a);
+    done[i] = true; ok[i] = right;
+    var sec = document.getElementById("q" + i);
+    sec.className = "q done " + (right ? "ok" : "bad");
+    Array.prototype.forEach.call(sec.querySelectorAll("input"), function (inp) { inp.disabled = true; });
+    if (q.type !== "num") {
+      var ans = q.type === "multi" ? q.answer : [q.answer], mine = q.type === "multi" ? a : [a];
+      Array.prototype.forEach.call(sec.querySelectorAll(".opt"), function (o) {
+        var k = parseInt(o.dataset.k, 10);
+        o.classList.remove("sel");
+        if (ans.indexOf(k) >= 0) o.classList.add("right"); else if (mine.indexOf(k) >= 0) o.classList.add("wrong");
+      });
+    }
+    var f = document.getElementById("f" + i);
+    f.hidden = false;
+    f.innerHTML = '<div class="verdict">' + (right ? "Correct" : "Not quite") + "</div>" +
+      '<p class="ans"><b>Answer:</b> ' + answerText(i) + (!right && q.type === "num" ? " (you entered " + a + ")" : "") + "</p>" +
+      "<p>" + q.exp + "</p>" +
+      '<p class="refs">Reference: ' + q.refs.map(function (r) { return '<a href="' + r.h + '">' + r.t + "</a>"; }).join(" &middot; ") + "</p>";
+    update();
+    return true;
+  }
+
+  function reset() {
+    A = Q.map(function () { return null; }); done = Q.map(function () { return false; }); ok = Q.map(function () { return false; });
+    build(); update();
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-check]");
+    if (b) check(parseInt(b.dataset.check, 10), false);
+  });
+  document.addEventListener("change", function (e) {
+    var t = e.target, sec = t.closest && t.closest(".q"); if (!sec) return;
+    var i = parseInt(sec.id.slice(1), 10);
+    if (done[i]) return;
+    A[i] = getAnswer(i);
+    document.getElementById("e" + i).textContent = "";
+    Array.prototype.forEach.call(sec.querySelectorAll(".opt"), function (o) { o.classList.toggle("sel", o.querySelector("input").checked); });
+    update();
+    if (document.getElementById("study").checked && Q[i].type !== "multi" && Q[i].type !== "num") check(i, true);
+  });
+  document.getElementById("check-all").addEventListener("click", function () {
+    var skipped = 0;
+    Q.forEach(function (q, i) { if (!done[i] && !check(i, true)) skipped++; });
+    if (skipped) { var first = Q.findIndex(function (q, i) { return !done[i]; }); if (first >= 0) document.getElementById("e" + first).textContent = skipped + " question(s) have no answer yet."; }
+  });
+  document.getElementById("reset").addEventListener("click", function () { reset(); window.scrollTo(0, 0); });
+  reset();
+})();
+</script>
+</body>
+</html>
